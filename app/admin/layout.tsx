@@ -5,7 +5,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { useTranslation } from "@/lib/i18n"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { LayoutDashboard, ClipboardList, MapPin, BarChart3, Users } from "lucide-react"
+import { LayoutDashboard, ClipboardList, MapPin, BarChart3, Users, ShieldAlert, Trophy } from "lucide-react"
 import type { Profile } from "@/lib/types"
 
 export default function AdminLayout({
@@ -24,6 +24,8 @@ export default function AdminLayout({
     { label: t("nav.city_map"), href: "/admin/map", icon: <MapPin className="h-4 w-4" /> },
     { label: t("nav.users"), href: "/admin/users", icon: <Users className="h-4 w-4" /> },
     { label: t("nav.analytics"), href: "/admin/analytics", icon: <BarChart3 className="h-4 w-4" /> },
+    { label: t("nav.sla"), href: "/admin/sla", icon: <ShieldAlert className="h-4 w-4" /> },
+    { label: t("nav.rankings"), href: "/admin/rankings", icon: <Trophy className="h-4 w-4" /> },
   ]
 
   useEffect(() => {

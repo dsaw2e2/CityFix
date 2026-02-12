@@ -1,6 +1,6 @@
 export type UserRole = "citizen" | "worker" | "admin"
 
-export type RequestStatus = "submitted" | "assigned" | "in_progress" | "resolved" | "closed"
+export type RequestStatus = "submitted" | "assigned" | "in_progress" | "overdue" | "resolved" | "closed"
 
 export type RequestPriority = "low" | "medium" | "high" | "urgent"
 
@@ -10,6 +10,31 @@ export interface Profile {
   phone: string | null
   role: UserRole
   created_at: string
+  // Worker stats
+  completed_tasks?: number
+  sla_violations?: number
+  average_rating?: number
+  total_score?: number
+}
+
+export interface SlaViolation {
+  id: string
+  request_id: string
+  worker_id: string | null
+  delay_hours: number
+  created_at: string
+  // Joined
+  request?: ServiceRequest
+  worker?: Profile
+}
+
+export interface WorkerRanking {
+  id: string
+  full_name: string | null
+  completed_tasks: number
+  sla_violations: number
+  average_rating: number
+  total_score: number
 }
 
 export interface Category {
@@ -45,6 +70,7 @@ export interface ServiceRequest {
   longitude: number | null
   address: string | null
   photo_url: string | null
+  sla_deadline: string | null
   ai_verification: AIVerification | null
   ai_validation: AIValidation | null
   created_at: string
@@ -71,6 +97,7 @@ export const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string
   submitted: { label: "Submitted", color: "bg-muted text-muted-foreground" },
   assigned: { label: "Assigned", color: "bg-primary/15 text-primary" },
   in_progress: { label: "In Progress", color: "bg-warning/15 text-warning" },
+  overdue: { label: "Overdue", color: "bg-destructive/15 text-destructive" },
   resolved: { label: "Resolved", color: "bg-success/15 text-success" },
   closed: { label: "Closed", color: "bg-muted text-muted-foreground" },
 }

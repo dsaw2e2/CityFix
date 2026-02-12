@@ -91,22 +91,32 @@ export default function SignUpPage() {
       if (signUpError) throw signUpError
 
       if (data.user) {
-        // Auto-confirm is handled by DB trigger, sign in immediately
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
+        // Check if the user's email is already confirmed (auto-confirm enabled)
+        // or if a session was returned (meaning they're already authenticated)
+        if (data.session) {
+          // User is already authenticated (auto-confirm is on)
+          const dest = `/${role}`
+          window.location.href = dest
+          return
+        }
 
-        if (signInError) throw signInError
+        // If user has identities but no session, email confirmation is required
+        if (data.user.identities && data.user.identities.length > 0) {
+          router.push("/auth/sign-up-success")
+          return
+        }
 
-        // Redirect to role dashboard - use window.location for a hard nav
-        // so middleware picks up the fresh session cookie
-        const dest = `/${role}`
-        window.location.href = dest
+        // If no identities returned, the email is already registered
+        setError("An account with this email already exists. Please sign in instead.")
         return
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const msg = err instanceof Error ? err.message : "An error occurred"
+      if (msg.includes("User already registered")) {
+        setError("An account with this email already exists. Please sign in instead.")
+      } else {
+        setError(msg)
+      }
     } finally {
       setIsLoading(false)
     }

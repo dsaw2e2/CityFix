@@ -5,12 +5,15 @@ export const maxDuration = 60
 export async function POST(req: NextRequest) {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
+    console.error("[validate-report] OPENAI_API_KEY not configured!")
     return NextResponse.json({ error: "AI service not configured" }, { status: 500 })
   }
 
   try {
     const body = await req.json()
     const { title, description, category, photo_url } = body
+
+    console.log("[validate-report] Validating report:", { title, category, hasPhoto: !!photo_url })
 
     if (!title || !description || !category) {
       return NextResponse.json(
@@ -90,16 +93,16 @@ Set valid=true only if score >= 4.`,
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "o3-mini",
+        model: "gpt-4o",
         messages: [{ role: "user", content }],
-        temperature: 0.2,
-        max_tokens: 300,
+        temperature: 0.3,
+        max_tokens: 500,
       }),
     })
 
     if (!gptRes.ok) {
       const errText = await gptRes.text()
-      console.error("[v0] OpenAI validate error:", gptRes.status, errText)
+      console.error("[validate-report] OpenAI API error:", gptRes.status, errText)
       // On AI failure, let the report through for manual review
       return NextResponse.json({
         valid: true,
@@ -112,9 +115,12 @@ Set valid=true only if score >= 4.`,
     const gptData = await gptRes.json()
     const rawText = gptData?.choices?.[0]?.message?.content || ""
 
+    console.log("[validate-report] Raw AI response:", rawText)
+
     // Parse JSON from GPT response
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
+      console.error("[validate-report] Could not extract JSON from response:", rawText)
       return NextResponse.json({
         valid: true,
         score: 5,
@@ -124,6 +130,7 @@ Set valid=true only if score >= 4.`,
     }
 
     const parsed = JSON.parse(jsonMatch[0])
+    console.log("[validate-report] Parsed result:", parsed)
 
     return NextResponse.json({
       valid: Boolean(parsed.valid),
@@ -136,7 +143,8 @@ Set valid=true only if score >= 4.`,
         : "medium",
     })
   } catch (err) {
-    console.error("[v0] Validate report error:", err)
+    console.error("[validate-report] Validation error:", err)
+    console.error("[validate-report] Error stack:", err instanceof Error ? err.stack : "No stack trace")
     // On any error, let report through
     return NextResponse.json({
       valid: true,

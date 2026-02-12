@@ -27,24 +27,24 @@ import { toast } from "sonner"
 import useSWR from "swr"
 
 async function fetchCategories(): Promise<Category[]> {
-  try {
-    const res = await fetch("/api/categories")
-    if (!res.ok) throw new Error("Failed")
-    return await res.json()
-  } catch {
-    // Fallback: try direct Supabase client
-    const supabase = createClient()
-    const { data } = await supabase
-      .from("categories")
-      .select("*")
-      .order("name")
-    return (data ?? []) as Category[]
-  }
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .order("name")
+  if (error) throw error
+  return (data ?? []) as Category[]
 }
 
 export default function NewRequestPage() {
   const { t } = useTranslation()
-  const { data: categories = [] } = useSWR("categories", fetchCategories)
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useSWR("categories", fetchCategories, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: true,
+    errorRetryCount: 3,
+  })
+
+  console.log("[v0] categories SWR state:", { categoriesLoading, categoriesError: categoriesError?.message, count: categories.length })
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [categoryId, setCategoryId] = useState("")
@@ -192,23 +192,18 @@ export default function NewRequestPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>{t("new.field.category")}</Label>
-              {categories.length === 0 ? (
-                <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 text-sm text-muted-foreground">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("new.field.category.placeholder")}
-                </div>
-              ) : (
-                <select
-                  value={categoryId}
-                  onChange={(e) => { setCategoryId(e.target.value); resetValidation() }}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="">{t("new.field.category.placeholder")}</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              )}
+              <select
+                value={categoryId}
+                onChange={(e) => { setCategoryId(e.target.value); resetValidation() }}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">
+                  {categoriesLoading ? "..." : t("new.field.category.placeholder")}
+                </option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
             </div>
             <div className="grid gap-2">
               <Label>{t("new.field.priority")}</Label>

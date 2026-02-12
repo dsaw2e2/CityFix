@@ -48,7 +48,7 @@ const translations: Record<string, Record<Locale, string>> = {
   "auth.confirm_password": { en: "Confirm Password", ru: "Подтвердите пароль", kk: "Құпия сөзді растаңыз" },
   "auth.creating": { en: "Creating account...", ru: "Создание аккаунта...", kk: "Аккаунт жасалуда..." },
   "auth.has_account": { en: "Already have an account?", ru: "Уже есть аккаунт?", kk: "Аккаунтыңыз бар ма?" },
-  "auth.error.title": { en: "Authentication Error", ru: "Ошибка аутентификации", kk: "��утентификация қатесі" },
+  "auth.error.title": { en: "Authentication Error", ru: "Ошибка аутентификации", kk: "����утентификация қатесі" },
   "auth.error.desc": { en: "Something went wrong during authentication. Please try again.", ru: "Что-то пошло не так при аутентификации. Попробуйте снова.", kk: "Аутентификация кезінде қате пайда болды. Қайтадан көріңіз." },
   "auth.error.back": { en: "Back to login", ru: "Вернуться к входу", kk: "Кіруге оралу" },
   "auth.success.title": { en: "Account created", ru: "Аккаунт создан", kk: "Аккаунт жасалды" },
@@ -284,6 +284,8 @@ const translations: Record<string, Record<Locale, string>> = {
   "rankings.col_rating": { en: "Rating", ru: "Рейтинг", kk: "Рейтинг" },
   "rankings.col_score": { en: "Score", ru: "Балл", kk: "Ұпай" },
   "rankings.unnamed": { en: "Unnamed", ru: "Без имени", kk: "Атсыз" },
+  "rankings.my_stats": { en: "Your Stats", ru: "Ваша статистика", kk: "Сіздің статистикаңыз" },
+  "rankings.you": { en: "You", ru: "Вы", kk: "Сіз" },
   "rankings.formula_title": { en: "Scoring Formula", ru: "Формула расчёта", kk: "Есептеу формуласы" },
   "rankings.formula_desc": { en: "Scores reward task completion and penalize SLA violations. Higher scores indicate better performance.", ru: "Баллы поощряют выполнение заданий и штрафуют за нарушения SLA. Более высокие баллы означают лучшую производительность.", kk: "Ұпайлар тапсырмаларды орындағаны үшін марапаттайды және SLA бұзушылықтары үшін жазалайды. Жоғары ұпайлар жақсы нәтижені білдіреді." },
 

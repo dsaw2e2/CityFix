@@ -29,7 +29,7 @@ async function fetchAllRequests(): Promise<ServiceRequest[]> {
 
 const STATUS_COLORS: Record<string, string> = {
   submitted: "#6b7280",
-  assigned: "#1a6dc2",
+  assigned: "#3a8a2e",
   in_progress: "#d97706",
   resolved: "#16a34a",
   closed: "#9ca3af",
@@ -37,7 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: "#9ca3af",
-  medium: "#1a6dc2",
+  medium: "#3a8a2e",
   high: "#d97706",
   urgent: "#dc2626",
 }
@@ -137,11 +137,11 @@ export default function AdminAnalyticsPage() {
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={dailyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 14%, 89%)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(140, 10%, 88%)" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Bar dataKey="count" fill="hsl(213, 80%, 45%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="hsl(134, 55%, 34%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -173,11 +173,11 @@ export default function AdminAnalyticsPage() {
             ) : (
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={categoryData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 14%, 89%)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(140, 10%, 88%)" />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                   <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="count" fill="hsl(160, 60%, 42%)" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="count" fill="hsl(170, 50%, 40%)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}

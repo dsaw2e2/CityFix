@@ -41,7 +41,7 @@ export function MapView({
 
       const statusColors: Record<string, string> = {
         submitted: "#6b7280",
-        assigned: "#1a6dc2",
+        assigned: "#3a8a2e",
         in_progress: "#d97706",
         resolved: "#16a34a",
         closed: "#9ca3af",
@@ -96,7 +96,7 @@ export function MapView({
 
       const statusColors: Record<string, string> = {
         submitted: "#6b7280",
-        assigned: "#1a6dc2",
+        assigned: "#3a8a2e",
         in_progress: "#d97706",
         resolved: "#16a34a",
         closed: "#9ca3af",

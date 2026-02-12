@@ -1,4 +1,7 @@
+"use client"
+
 import { cn } from "@/lib/utils"
+import { useTranslation } from "@/lib/i18n"
 import { PRIORITY_CONFIG, type RequestPriority } from "@/lib/types"
 
 interface PriorityBadgeProps {
@@ -7,6 +10,7 @@ interface PriorityBadgeProps {
 }
 
 export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
+  const { t } = useTranslation()
   const config = PRIORITY_CONFIG[priority]
   return (
     <span
@@ -16,7 +20,7 @@ export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
         className
       )}
     >
-      {config.label}
+      {t(`priority.${priority}`)}
     </span>
   )
 }

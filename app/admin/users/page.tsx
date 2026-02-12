@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useTranslation } from "@/lib/i18n"
 import type { Profile, UserRole } from "@/lib/types"
 import { Search, User, Wrench, Shield, Inbox, Loader2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
@@ -40,6 +41,7 @@ const ROLE_COLORS: Record<UserRole, string> = {
 }
 
 function UserCard({ profile }: { profile: Profile }) {
+  const { t } = useTranslation()
   const [isUpdating, setIsUpdating] = useState(false)
 
   const handleRoleChange = async (newRole: UserRole) => {
@@ -52,7 +54,7 @@ function UserCard({ profile }: { profile: Profile }) {
         .eq("id", profile.id)
 
       if (error) throw error
-      toast.success(`Role updated to ${newRole}`)
+      toast.success(`${t("auth.role")}: ${t(`role.${newRole}`)}`)
       mutate("admin-users")
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to update role")
@@ -69,10 +71,10 @@ function UserCard({ profile }: { profile: Profile }) {
             {ROLE_ICONS[profile.role]}
           </div>
           <div>
-            <p className="font-semibold text-foreground">{profile.full_name || "Unnamed"}</p>
+            <p className="font-semibold text-foreground">{profile.full_name || t("admin.users.unnamed")}</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {profile.phone && <span>{profile.phone}</span>}
-              <span>Joined {formatDistanceToNow(new Date(profile.created_at), { addSuffix: true })}</span>
+              <span>{t("admin.users.joined")} {formatDistanceToNow(new Date(profile.created_at), { addSuffix: true })}</span>
             </div>
           </div>
         </div>
@@ -83,9 +85,9 @@ function UserCard({ profile }: { profile: Profile }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="citizen">Citizen</SelectItem>
-              <SelectItem value="worker">Worker</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="citizen">{t("role.citizen")}</SelectItem>
+              <SelectItem value="worker">{t("role.worker")}</SelectItem>
+              <SelectItem value="admin">{t("role.admin")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -95,6 +97,7 @@ function UserCard({ profile }: { profile: Profile }) {
 }
 
 export default function AdminUsersPage() {
+  const { t } = useTranslation()
   const { data: users = [], isLoading } = useSWR("admin-users", fetchAllUsers)
   const [search, setSearch] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
@@ -127,31 +130,26 @@ export default function AdminUsersPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">User Management</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("admin.users.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {users.length} total users &mdash; {roleCounts["citizen"] || 0} citizens, {roleCounts["worker"] || 0} workers, {roleCounts["admin"] || 0} admins
+          {users.length} {t("admin.users.total")} &mdash; {roleCounts["citizen"] || 0} {t("admin.users.citizens")}, {roleCounts["worker"] || 0} {t("admin.users.workers")}, {roleCounts["admin"] || 0} {t("admin.users.admins")}
         </p>
       </div>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search users..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder={t("admin.users.search")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-full sm:w-[160px]">
-            <SelectValue placeholder="All roles" />
+            <SelectValue placeholder={t("admin.users.all_roles")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All roles</SelectItem>
-            <SelectItem value="citizen">Citizens</SelectItem>
-            <SelectItem value="worker">Workers</SelectItem>
-            <SelectItem value="admin">Admins</SelectItem>
+            <SelectItem value="all">{t("admin.users.all_roles")}</SelectItem>
+            <SelectItem value="citizen">{t("admin.users.citizens")}</SelectItem>
+            <SelectItem value="worker">{t("admin.users.workers")}</SelectItem>
+            <SelectItem value="admin">{t("admin.users.admins")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -159,7 +157,7 @@ export default function AdminUsersPage() {
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
           <Inbox className="mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="font-medium text-muted-foreground">No users found</p>
+          <p className="font-medium text-muted-foreground">{t("admin.users.none")}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">

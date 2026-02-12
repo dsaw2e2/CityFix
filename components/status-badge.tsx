@@ -1,4 +1,7 @@
+"use client"
+
 import { cn } from "@/lib/utils"
+import { useTranslation } from "@/lib/i18n"
 import { STATUS_CONFIG, type RequestStatus } from "@/lib/types"
 
 interface StatusBadgeProps {
@@ -7,6 +10,7 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const { t } = useTranslation()
   const config = STATUS_CONFIG[status]
   return (
     <span
@@ -16,7 +20,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
         className
       )}
     >
-      {config.label}
+      {t(`status.${status}`)}
     </span>
   )
 }

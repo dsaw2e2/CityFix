@@ -1,4 +1,7 @@
+"use client"
+
 import { getCitizenLevel } from "@/lib/gamification"
+import { useTranslation } from "@/lib/i18n"
 import { Award } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -8,6 +11,7 @@ interface CitizenLevelBadgeProps {
 }
 
 export function CitizenLevelBadge({ reportCount, className }: CitizenLevelBadgeProps) {
+  const { t } = useTranslation()
   const level = getCitizenLevel(reportCount)
 
   return (
@@ -20,7 +24,7 @@ export function CitizenLevelBadge({ reportCount, className }: CitizenLevelBadgeP
       )}
     >
       <Award className="h-3 w-3" />
-      {level.title}
+      {t(`level.${level.level}.title`)}
     </span>
   )
 }

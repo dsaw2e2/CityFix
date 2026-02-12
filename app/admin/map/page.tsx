@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { MapView } from "@/components/map-view"
+import { useTranslation } from "@/lib/i18n"
 import type { ServiceRequest } from "@/lib/types"
 import useSWR from "swr"
 
@@ -16,6 +17,7 @@ async function fetchAllRequests(): Promise<ServiceRequest[]> {
 }
 
 export default function AdminMapPage() {
+  const { t } = useTranslation()
   const { data: requests = [], isLoading } = useSWR(
     "admin-map-requests",
     fetchAllRequests
@@ -24,10 +26,8 @@ export default function AdminMapPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">City Map</h1>
-        <p className="text-sm text-muted-foreground">
-          All active service requests across the city
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("admin.map.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("admin.map.subtitle")}</p>
       </div>
 
       {isLoading ? (

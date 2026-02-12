@@ -2,27 +2,29 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { DashboardShell } from "@/components/dashboard-shell"
+import { useTranslation } from "@/lib/i18n"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { LayoutDashboard, ClipboardList, MapPin, BarChart3, Users } from "lucide-react"
 import type { Profile } from "@/lib/types"
-
-const navItems = [
-  { label: "Overview", href: "/admin", icon: <LayoutDashboard className="h-4 w-4" /> },
-  { label: "All Requests", href: "/admin/requests", icon: <ClipboardList className="h-4 w-4" /> },
-  { label: "City Map", href: "/admin/map", icon: <MapPin className="h-4 w-4" /> },
-  { label: "Users", href: "/admin/users", icon: <Users className="h-4 w-4" /> },
-  { label: "Analytics", href: "/admin/analytics", icon: <BarChart3 className="h-4 w-4" /> },
-]
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { t } = useTranslation()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+
+  const navItems = [
+    { label: t("nav.overview"), href: "/admin", icon: <LayoutDashboard className="h-4 w-4" /> },
+    { label: t("nav.all_requests"), href: "/admin/requests", icon: <ClipboardList className="h-4 w-4" /> },
+    { label: t("nav.city_map"), href: "/admin/map", icon: <MapPin className="h-4 w-4" /> },
+    { label: t("nav.users"), href: "/admin/users", icon: <Users className="h-4 w-4" /> },
+    { label: t("nav.analytics"), href: "/admin/analytics", icon: <BarChart3 className="h-4 w-4" /> },
+  ]
 
   useEffect(() => {
     async function loadProfile() {

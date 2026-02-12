@@ -6,6 +6,7 @@ import { PriorityBadge } from "@/components/priority-badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { ServiceRequest } from "@/lib/types"
 import { MapPin, Clock, Tag, Inbox, BrainCircuit, CheckCircle2, XCircle, Star } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
 import { formatDistanceToNow } from "date-fns"
 import { Progress } from "@/components/ui/progress"
 import useSWR from "swr"
@@ -26,6 +27,7 @@ async function fetchCompletedTasks(): Promise<ServiceRequest[]> {
 }
 
 export default function WorkerHistoryPage() {
+  const { t } = useTranslation()
   const { data: tasks = [], isLoading } = useSWR("worker-history", fetchCompletedTasks)
 
   if (isLoading) {
@@ -39,17 +41,17 @@ export default function WorkerHistoryPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Completed Tasks</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("worker.history.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {tasks.length} completed task{tasks.length !== 1 ? "s" : ""}
+          {tasks.length} {tasks.length !== 1 ? t("worker.history.count_plural") : t("worker.history.count")}
         </p>
       </div>
 
       {tasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
           <Inbox className="mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="font-medium text-muted-foreground">No completed tasks yet</p>
-          <p className="text-sm text-muted-foreground">Tasks you resolve will appear here.</p>
+          <p className="font-medium text-muted-foreground">{t("worker.history.empty")}</p>
+          <p className="text-sm text-muted-foreground">{t("worker.history.hint")}</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -84,7 +86,7 @@ export default function WorkerHistoryPage() {
                   <div className="mt-3 rounded-lg border bg-muted/50 p-3">
                     <div className="mb-2 flex items-center gap-2">
                       <BrainCircuit className="h-4 w-4 text-primary" />
-                      <span className="text-xs font-semibold text-foreground">AI Verification</span>
+                      <span className="text-xs font-semibold text-foreground">{t("worker.history.ai")}</span>
                       <div className="flex items-center gap-1">
                         {task.ai_verification.resolved ? (
                           <CheckCircle2 className="h-3.5 w-3.5 text-success" />

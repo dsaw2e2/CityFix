@@ -135,7 +135,7 @@ function AvailableTaskCard({ task }: { task: ServiceRequest }) {
         .is("assigned_worker_id", null)
 
       if (error) throw error
-      toast.success("Task claimed! It now appears in My Tasks.")
+      toast.success(t("worker.claim") + "!")
       mutate("worker-tasks")
       mutate("worker-available")
     } catch (err: unknown) {
@@ -190,12 +190,12 @@ function AvailableTaskCard({ task }: { task: ServiceRequest }) {
           {isClaiming ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Claiming...
+              {t("worker.claiming")}
             </>
           ) : (
             <>
               <HandMetal className="mr-2 h-4 w-4" />
-              Claim This Task
+              {t("worker.claim")}
             </>
           )}
         </Button>
@@ -206,6 +206,7 @@ function AvailableTaskCard({ task }: { task: ServiceRequest }) {
 
 /* ── My assigned task card (update status) ── */
 function MyTaskCard({ task }: { task: ServiceRequest }) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const [newStatus, setNewStatus] = useState<RequestStatus>(task.status)
   const [comment, setComment] = useState("")
@@ -228,7 +229,7 @@ function MyTaskCard({ task }: { task: ServiceRequest }) {
 
   const handleVerify = async () => {
     if (!photoFile) {
-      toast.error("Please attach an after-photo first")
+      toast.error(t("worker.after_photo"))
       return
     }
     setIsVerifying(true)
@@ -247,7 +248,7 @@ function MyTaskCard({ task }: { task: ServiceRequest }) {
       if (!res.ok) throw new Error(data.error || `Verification failed (${res.status})`)
       if (data.verification) {
         setVerification(data.verification)
-        toast.success("AI verification complete")
+        toast.success(t("worker.ai_result"))
       } else {
         throw new Error("No verification data returned")
       }
@@ -298,7 +299,7 @@ function MyTaskCard({ task }: { task: ServiceRequest }) {
         })
       if (logError) throw logError
 
-      toast.success("Task updated successfully")
+      toast.success(t("worker.save"))
       setComment("")
       setPhotoFile(null)
       setPhotoPreview(null)
@@ -350,54 +351,54 @@ function MyTaskCard({ task }: { task: ServiceRequest }) {
 
         {task.photo_url && (
           <div className="mb-3">
-            <p className="mb-1 text-xs font-medium text-muted-foreground">Before photo:</p>
+            <p className="mb-1 text-xs font-medium text-muted-foreground">{t("worker.before_photo")}</p>
             <img src={task.photo_url} alt="Issue photo (before)" className="h-32 w-full rounded-lg object-cover" />
           </div>
         )}
 
         <Button variant="outline" size="sm" className="w-full" onClick={() => setExpanded(!expanded)}>
           {expanded ? (
-            <><ChevronUp className="mr-1 h-4 w-4" /> Collapse</>
+            <><ChevronUp className="mr-1 h-4 w-4" /> {t("worker.collapse")}</>
           ) : (
-            <><ChevronDown className="mr-1 h-4 w-4" /> Update Status</>
+            <><ChevronDown className="mr-1 h-4 w-4" /> {t("worker.update_status")}</>
           )}
         </Button>
 
         {expanded && (
           <div className="mt-4 flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
             <div className="grid gap-2">
-              <Label>Status</Label>
+              <Label>{t("worker.status")}</Label>
               <Select value={newStatus} onValueChange={(v) => setNewStatus(v as RequestStatus)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
+                  <SelectItem value="assigned">{t("status.assigned")}</SelectItem>
+                  <SelectItem value="in_progress">{t("status.in_progress")}</SelectItem>
+                  <SelectItem value="resolved">{t("status.resolved")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Comment</Label>
+              <Label>{t("worker.comment")}</Label>
               <Textarea
-                placeholder="Add a note about the work done..."
+                placeholder={t("worker.comment.placeholder")}
                 rows={3}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label>After Photo {newStatus === "resolved" ? "(required for AI check)" : "(optional)"}</Label>
+              <Label>{t("worker.after_photo")} {newStatus === "resolved" ? t("worker.after_photo_required") : t("worker.after_photo_optional")}</Label>
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
               <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                   <Camera className="mr-1 h-4 w-4" />
-                  {photoFile ? "Change Photo" : "Attach Photo"}
+                  {photoFile ? t("new.photo.change") : t("new.photo.attach")}
                 </Button>
                 {photoFile && <span className="text-xs text-muted-foreground">{photoFile.name}</span>}
               </div>
               {photoPreview && (
                 <div>
-                  <p className="mb-1 text-xs font-medium text-muted-foreground">After photo preview:</p>
+                  <p className="mb-1 text-xs font-medium text-muted-foreground">{t("worker.after_preview")}</p>
                   <img src={photoPreview} alt="After photo preview" className="h-32 w-full rounded-lg object-cover" />
                 </div>
               )}
@@ -406,9 +407,9 @@ function MyTaskCard({ task }: { task: ServiceRequest }) {
             {photoFile && (
               <Button type="button" variant="secondary" onClick={handleVerify} disabled={isVerifying} className="gap-2">
                 {isVerifying ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Running AI Analysis...</>
+                  <><Loader2 className="h-4 w-4 animate-spin" /> {t("worker.ai_verifying")}</>
                 ) : (
-                  <><BrainCircuit className="h-4 w-4" /> Run AI Verification</>
+                  <><BrainCircuit className="h-4 w-4" /> {t("worker.ai_verify")}</>
                 )}
               </Button>
             )}
@@ -417,9 +418,9 @@ function MyTaskCard({ task }: { task: ServiceRequest }) {
 
             <Button onClick={handleUpdate} disabled={isUpdating}>
               {isUpdating ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating...</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("worker.saving")}</>
               ) : (
-                "Save Update"
+                t("worker.save")
               )}
             </Button>
           </div>
@@ -431,6 +432,7 @@ function MyTaskCard({ task }: { task: ServiceRequest }) {
 
 /* ── Main Worker Dashboard ── */
 export default function WorkerDashboard() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<"my" | "available">("available")
   const { data: myTasks = [], isLoading: loadingMy } = useSWR("worker-tasks", fetchMyTasks)
   const { data: availableTasks = [], isLoading: loadingAvailable } = useSWR("worker-available", fetchAvailableTasks)
@@ -440,9 +442,9 @@ export default function WorkerDashboard() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Worker Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("worker.title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {myTasks.length} active task{myTasks.length !== 1 ? "s" : ""} &middot; {availableTasks.length} available
+          {myTasks.length} {myTasks.length !== 1 ? t("worker.stats_plural") : t("worker.stats")} &middot; {availableTasks.length} {t("worker.available")}
         </p>
       </div>
 
@@ -455,7 +457,7 @@ export default function WorkerDashboard() {
           }`}
         >
           <Inbox className="h-4 w-4" />
-          Available ({availableTasks.length})
+          {t("worker.available_label")} ({availableTasks.length})
         </button>
         <button
           onClick={() => setTab("my")}
@@ -464,7 +466,7 @@ export default function WorkerDashboard() {
           }`}
         >
           <ListTodo className="h-4 w-4" />
-          My Tasks ({myTasks.length})
+          {t("worker.my_tasks_label")} ({myTasks.length})
         </button>
       </div>
 
@@ -476,8 +478,8 @@ export default function WorkerDashboard() {
         availableTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
             <CheckCircle2 className="mb-3 h-10 w-10 text-muted-foreground" />
-            <p className="font-medium text-muted-foreground">No available tasks</p>
-            <p className="text-sm text-muted-foreground">All current reports have been claimed.</p>
+            <p className="font-medium text-muted-foreground">{t("worker.no_available")}</p>
+            <p className="text-sm text-muted-foreground">{t("worker.all_claimed")}</p>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
@@ -489,8 +491,8 @@ export default function WorkerDashboard() {
       ) : myTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
           <Inbox className="mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="font-medium text-muted-foreground">No active tasks</p>
-          <p className="text-sm text-muted-foreground">Claim a task from the Available tab to get started.</p>
+          <p className="font-medium text-muted-foreground">{t("worker.no_active")}</p>
+          <p className="text-sm text-muted-foreground">{t("worker.claim_hint")}</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">

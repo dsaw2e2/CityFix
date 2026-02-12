@@ -1,8 +1,11 @@
+"use client"
+
 import {
   getCitizenLevel,
   getNextLevel,
   getProgressToNextLevel,
 } from "@/lib/gamification"
+import { useTranslation } from "@/lib/i18n"
 import { Progress } from "@/components/ui/progress"
 import { Award, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -12,6 +15,7 @@ interface CitizenLevelCardProps {
 }
 
 export function CitizenLevelCard({ reportCount }: CitizenLevelCardProps) {
+  const { t } = useTranslation()
   const currentLevel = getCitizenLevel(reportCount)
   const nextLevel = getNextLevel(reportCount)
   const progress = getProgressToNextLevel(reportCount)
@@ -31,14 +35,14 @@ export function CitizenLevelCard({ reportCount }: CitizenLevelCardProps) {
           <div>
             <div className="flex items-center gap-2">
               <h3 className={cn("text-sm font-semibold", currentLevel.colorClass)}>
-                {currentLevel.title}
+                {t(`level.${currentLevel.level}.title`)}
               </h3>
               <span className="text-xs text-muted-foreground">
-                Level {currentLevel.level}
+                {t("level.label")} {currentLevel.level}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              {currentLevel.description}
+              {t(`level.${currentLevel.level}.desc`)}
             </p>
           </div>
         </div>
@@ -47,7 +51,7 @@ export function CitizenLevelCard({ reportCount }: CitizenLevelCardProps) {
             {reportCount}
           </span>
           <span className="text-xs text-muted-foreground">
-            {reportCount === 1 ? "report" : "reports"}
+            {reportCount === 1 ? t("level.report") : t("level.reports")}
           </span>
         </div>
       </div>
@@ -57,10 +61,10 @@ export function CitizenLevelCard({ reportCount }: CitizenLevelCardProps) {
           <div className="mb-1.5 flex items-center justify-between text-xs">
             <span className="flex items-center gap-1 text-muted-foreground">
               <TrendingUp className="h-3 w-3" />
-              Next: <span className={cn("font-medium", nextLevel.colorClass)}>{nextLevel.title}</span>
+              {t("level.next")}: <span className={cn("font-medium", nextLevel.colorClass)}>{t(`level.${nextLevel.level}.title`)}</span>
             </span>
             <span className="text-muted-foreground">
-              {reportCount}/{nextLevel.minReports} reports
+              {reportCount}/{nextLevel.minReports} {t("level.reports")}
             </span>
           </div>
           <Progress
@@ -72,7 +76,7 @@ export function CitizenLevelCard({ reportCount }: CitizenLevelCardProps) {
       ) : (
         <div className="mt-4 flex items-center gap-1.5 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
           <Award className="h-3.5 w-3.5" />
-          Highest level reached. Thank you for your outstanding civic engagement.
+          {t("level.max")}
         </div>
       )}
     </div>

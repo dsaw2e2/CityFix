@@ -134,7 +134,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t px-4 py-6 text-center text-sm text-muted-foreground">
-        <p>{t("landing.footer")}</p>
+        {t("landing.footer")}
       </footer>
     </div>
   )

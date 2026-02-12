@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "CityFix - Municipal Service Request Platform",
   description:
     "Report civic issues, track resolutions, and keep your city running smoothly.",
-  generator: "v0.app",
+  generator: "v0.dev",
 }
 
 export const viewport: Viewport = {

@@ -22,40 +22,30 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { toast } from "sonner"
 
-interface CategoryOption {
-  id: string
-  name: string
+const CATEGORIES: Record<string, { id: string; en: string; ru: string; kk: string }[]> = {
+  all: [
+    { id: "d0d14603-6539-421a-b387-369d480ab5c7", en: "Graffiti", ru: "Граффити", kk: "Граффити" },
+    { id: "b5c76a92-05c1-4dd1-84e8-d4206f128ee1", en: "Noise Complaint", ru: "Шумовая жалоба", kk: "Шу шағымы" },
+    { id: "34339582-ff0e-4c32-89eb-da9627d93265", en: "Pothole", ru: "Яма на дороге", kk: "Жол шұңқыры" },
+    { id: "53def41d-e9e2-4ceb-8575-2e07e732e248", en: "Sidewalk Damage", ru: "Повреждение тротуара", kk: "Тротуар зақымы" },
+    { id: "6be9ad12-5741-4f28-931f-3665a380192b", en: "Streetlight", ru: "Уличное освещение", kk: "Көше жарығы" },
+    { id: "e3356d96-0363-43d8-99b6-e2118530fc2e", en: "Trash / Illegal Dumping", ru: "Мусор / Незаконный выброс", kk: "Қоқыс / Заңсыз тастау" },
+    { id: "81840f67-2f2b-47c7-bf63-cbad8915c938", en: "Water Leak", ru: "Утечка воды", kk: "Су ағуы" },
+    { id: "5d665e46-1bcb-48bc-86df-4bf519e0a98a", en: "Other", ru: "Другое", kk: "Басқа" },
+  ],
 }
 
 export default function NewRequestPage() {
-  const { t } = useTranslation()
-  const [categories, setCategories] = useState<CategoryOption[]>([])
-  const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const { t, locale } = useTranslation()
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const supabase = createClient()
-        const { data, error } = await supabase
-          .from("categories")
-          .select("id, name")
-          .order("name")
-        if (!cancelled && data && !error) {
-          setCategories(data)
-        }
-      } catch (e) {
-        console.log("[v0] categories fetch error:", e)
-      } finally {
-        if (!cancelled) setCategoriesLoading(false)
-      }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [])
+  const categories = CATEGORIES.all.map((c) => ({
+    id: c.id,
+    name: c[locale as "en" | "ru" | "kk"] || c.en,
+  }))
+
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [categoryId, setCategoryId] = useState("")
@@ -209,7 +199,7 @@ export default function NewRequestPage() {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="">
-                  {categoriesLoading ? "..." : t("new.field.category.placeholder")}
+                  {t("new.field.category.placeholder")}
                 </option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>

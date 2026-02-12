@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { useTranslation } from "@/lib/i18n"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -30,6 +32,7 @@ const ROLE_CODES: Record<string, string> = {
 }
 
 export default function SignUpPage() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [repeatPassword, setRepeatPassword] = useState("")
@@ -49,26 +52,25 @@ export default function SignUpPage() {
     setError(null)
 
     if (password !== repeatPassword) {
-      setError("Passwords do not match")
+      setError(t("auth.error.passwords_mismatch"))
       setIsLoading(false)
       return
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+      setError(t("auth.error.password_short"))
       setIsLoading(false)
       return
     }
 
-    // Validate access code for worker/admin
     if (needsCode) {
       if (!accessCode) {
-        setError(`Access code is required for ${role} registration`)
+        setError(t("auth.error.code_required"))
         setIsLoading(false)
         return
       }
       if (accessCode !== ROLE_CODES[role]) {
-        setError("Invalid access code. Contact your department administrator.")
+        setError(t("auth.error.code_invalid"))
         setIsLoading(false)
         return
       }
@@ -91,29 +93,24 @@ export default function SignUpPage() {
       if (signUpError) throw signUpError
 
       if (data.user) {
-        // Check if the user's email is already confirmed (auto-confirm enabled)
-        // or if a session was returned (meaning they're already authenticated)
         if (data.session) {
-          // User is already authenticated (auto-confirm is on)
           const dest = `/${role}`
           window.location.href = dest
           return
         }
 
-        // If user has identities but no session, email confirmation is required
         if (data.user.identities && data.user.identities.length > 0) {
           router.push("/auth/sign-up-success")
           return
         }
 
-        // If no identities returned, the email is already registered
-        setError("An account with this email already exists. Please sign in instead.")
+        setError(t("auth.error.exists"))
         return
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "An error occurred"
       if (msg.includes("User already registered")) {
-        setError("An account with this email already exists. Please sign in instead.")
+        setError(t("auth.error.exists"))
       } else {
         setError(msg)
       }
@@ -132,29 +129,27 @@ export default function SignUpPage() {
               CityFix
             </span>
           </div>
+          <LanguageSwitcher />
           <Card className="w-full">
             <CardHeader className="text-center">
-              <CardTitle className="text-xl">Create an account</CardTitle>
-              <CardDescription>
-                Sign up with your eGov credentials
-              </CardDescription>
+              <CardTitle className="text-xl">{t("auth.create_title")}</CardTitle>
+              <CardDescription>{t("auth.create_desc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignUp}>
                 <div className="flex flex-col gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="fullName">Full Name</Label>
+                    <Label htmlFor="fullName">{t("auth.fullname")}</Label>
                     <Input
                       id="fullName"
                       type="text"
-                      placeholder="Jane Doe"
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{t("auth.email")}</Label>
                     <Input
                       id="email"
                       type="email"
@@ -165,7 +160,7 @@ export default function SignUpPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="role">Role</Label>
+                    <Label htmlFor="role">{t("auth.role")}</Label>
                     <Select
                       value={role}
                       onValueChange={(v) => {
@@ -177,9 +172,9 @@ export default function SignUpPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="citizen">Citizen - Report issues</SelectItem>
-                        <SelectItem value="worker">Field Worker - Resolve tasks</SelectItem>
-                        <SelectItem value="admin">Administrator - Manage platform</SelectItem>
+                        <SelectItem value="citizen">{t("auth.role.citizen")}</SelectItem>
+                        <SelectItem value="worker">{t("auth.role.worker")}</SelectItem>
+                        <SelectItem value="admin">{t("auth.role.admin")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -188,29 +183,29 @@ export default function SignUpPage() {
                     <div className="grid gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3">
                       <Label htmlFor="accessCode" className="flex items-center gap-1.5 text-primary">
                         <KeyRound className="h-3.5 w-3.5" />
-                        {role === "worker" ? "Worker" : "Admin"} Access Code
+                        {role === "worker" ? t("role.worker") : t("role.admin")} {t("auth.access_code")}
                       </Label>
                       <Input
                         id="accessCode"
                         type="password"
-                        placeholder={`Enter ${role} access code`}
+                        placeholder={t("auth.access_code.placeholder")}
                         required
                         value={accessCode}
                         onChange={(e) => setAccessCode(e.target.value)}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Contact your department administrator for the access code.
+                        {t("auth.access_code.help")}
                       </p>
                     </div>
                   )}
 
                   <div className="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">{t("auth.password")}</Label>
                     <div className="relative">
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="Min 6 characters"
+                        placeholder={t("auth.password.min6")}
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -226,7 +221,7 @@ export default function SignUpPage() {
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="repeat-password">Confirm Password</Label>
+                    <Label htmlFor="repeat-password">{t("auth.confirm_password")}</Label>
                     <Input
                       id="repeat-password"
                       type={showPassword ? "text" : "password"}
@@ -238,28 +233,24 @@ export default function SignUpPage() {
                   {error && (
                     <p className="text-sm font-medium text-destructive">{error}</p>
                   )}
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
+                  <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
+                        {t("auth.creating")}
                       </>
                     ) : (
-                      "Create account"
+                      t("auth.create_account")
                     )}
                   </Button>
                 </div>
                 <div className="mt-4 text-center text-sm">
-                  {"Already have an account? "}
+                  {t("auth.has_account")}{" "}
                   <Link
                     href="/auth/login"
                     className="text-primary underline underline-offset-4"
                   >
-                    Sign in
+                    {t("auth.signin")}
                   </Link>
                 </div>
               </form>

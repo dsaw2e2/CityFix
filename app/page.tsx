@@ -1,5 +1,9 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { useTranslation } from "@/lib/i18n"
 import {
   Shield,
   FileText,
@@ -12,34 +16,33 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-const features = [
-  {
-    icon: <FileText className="h-6 w-6" />,
-    title: "Report Issues",
-    description:
-      "Submit service requests for potholes, streetlights, trash, and more in seconds.",
-  },
-  {
-    icon: <MapPin className="h-6 w-6" />,
-    title: "Track on Map",
-    description:
-      "See all active requests plotted on an interactive map with real-time status.",
-  },
-  {
-    icon: <BarChart3 className="h-6 w-6" />,
-    title: "Monitor Progress",
-    description:
-      "Follow every step from submission to resolution with a transparent status tracker.",
-  },
-]
-
-const stats = [
-  { icon: <CheckCircle2 className="h-5 w-5" />, value: "2,847", label: "Issues Resolved" },
-  { icon: <Clock className="h-5 w-5" />, value: "< 48h", label: "Avg. Response" },
-  { icon: <Users className="h-5 w-5" />, value: "12,500+", label: "Active Citizens" },
-]
-
 export default function LandingPage() {
+  const { t } = useTranslation()
+
+  const features = [
+    {
+      icon: <FileText className="h-6 w-6" />,
+      title: t("landing.feature1.title"),
+      description: t("landing.feature1.desc"),
+    },
+    {
+      icon: <MapPin className="h-6 w-6" />,
+      title: t("landing.feature2.title"),
+      description: t("landing.feature2.desc"),
+    },
+    {
+      icon: <BarChart3 className="h-6 w-6" />,
+      title: t("landing.feature3.title"),
+      description: t("landing.feature3.desc"),
+    },
+  ]
+
+  const stats = [
+    { icon: <CheckCircle2 className="h-5 w-5" />, value: "2,847", label: t("landing.stat.resolved") },
+    { icon: <Clock className="h-5 w-5" />, value: "< 48h", label: t("landing.stat.response") },
+    { icon: <Users className="h-5 w-5" />, value: "12,500+", label: t("landing.stat.citizens") },
+  ]
+
   return (
     <div className="flex min-h-svh flex-col">
       {/* Header */}
@@ -49,12 +52,13 @@ export default function LandingPage() {
             <Shield className="h-6 w-6 text-primary" />
             <span className="text-lg font-bold tracking-tight">CityFix</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/auth/login">Sign in</Link>
+              <Link href="/auth/login">{t("auth.signin")}</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link href="/auth/sign-up">Get started</Link>
+              <Link href="/auth/sign-up">{t("auth.signup")}</Link>
             </Button>
           </div>
         </div>
@@ -65,25 +69,24 @@ export default function LandingPage() {
         <div className="mx-auto max-w-2xl">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
             <Shield className="h-4 w-4" />
-            Municipal Service Platform
+            {t("landing.badge")}
           </div>
           <h1 className="mb-4 text-balance text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-            Keep your city running{" "}
-            <span className="text-primary">smoothly</span>
+            {t("landing.hero.title")}{" "}
+            <span className="text-primary">{t("landing.hero.highlight")}</span>
           </h1>
           <p className="mb-8 text-pretty text-lg text-muted-foreground md:text-xl">
-            Report civic issues, track resolutions in real time, and collaborate
-            with city workers to build a better community.
+            {t("landing.hero.subtitle")}
           </p>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Button size="lg" asChild>
               <Link href="/auth/sign-up">
-                Report an Issue
+                {t("landing.cta.report")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link href="/auth/login">Sign in to Dashboard</Link>
+              <Link href="/auth/login">{t("landing.cta.signin")}</Link>
             </Button>
           </div>
         </div>
@@ -106,10 +109,10 @@ export default function LandingPage() {
       <section className="border-t bg-card px-4 py-16">
         <div className="mx-auto max-w-4xl">
           <h2 className="mb-2 text-center text-2xl font-bold tracking-tight">
-            How it works
+            {t("landing.features.title")}
           </h2>
           <p className="mb-10 text-center text-muted-foreground">
-            Three simple steps to a better city
+            {t("landing.features.subtitle")}
           </p>
           <div className="grid gap-6 md:grid-cols-3">
             {features.map((feature) => (
@@ -131,7 +134,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t px-4 py-6 text-center text-sm text-muted-foreground">
-        <p>CityFix eGov Platform &mdash; Built for citizens, by citizens.</p>
+        <p>{t("landing.footer")}</p>
       </footer>
     </div>
   )

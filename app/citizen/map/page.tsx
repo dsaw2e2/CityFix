@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { MapView } from "@/components/map-view"
+import { useTranslation } from "@/lib/i18n"
 import type { ServiceRequest } from "@/lib/types"
 import useSWR from "swr"
 
@@ -22,18 +23,14 @@ async function fetchRequests(): Promise<ServiceRequest[]> {
 }
 
 export default function CitizenMapPage() {
-  const { data: requests = [], isLoading } = useSWR(
-    "citizen-requests-map",
-    fetchRequests
-  )
+  const { data: requests = [], isLoading } = useSWR("citizen-requests-map", fetchRequests)
+  const { t } = useTranslation()
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Request Map</h1>
-        <p className="text-sm text-muted-foreground">
-          View your reported issues on the map
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("citizen.map.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("citizen.map.subtitle")}</p>
       </div>
 
       {isLoading ? (
@@ -41,10 +38,7 @@ export default function CitizenMapPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
       ) : (
-        <MapView
-          requests={requests}
-          className="h-[calc(100svh-220px)] w-full rounded-lg border"
-        />
+        <MapView requests={requests} className="h-[calc(100svh-220px)] w-full rounded-lg border" />
       )}
     </div>
   )

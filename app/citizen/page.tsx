@@ -11,11 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { ServiceRequest, RequestStatus } from "@/lib/types"
+import type { ServiceRequest } from "@/lib/types"
 import { CitizenLevelCard } from "@/components/citizen-level-card"
+import { useTranslation } from "@/lib/i18n"
 import { PlusCircle, Search, Inbox } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import useSWR from "swr"
 
 async function fetchRequests(): Promise<ServiceRequest[]> {
@@ -36,6 +37,7 @@ async function fetchRequests(): Promise<ServiceRequest[]> {
 
 export default function CitizenDashboard() {
   const { data: requests = [], isLoading } = useSWR("citizen-requests", fetchRequests)
+  const { t } = useTranslation()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
@@ -65,15 +67,13 @@ export default function CitizenDashboard() {
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Requests</h1>
-          <p className="text-sm text-muted-foreground">
-            Track your submitted service requests
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("citizen.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("citizen.subtitle")}</p>
         </div>
         <Button asChild>
           <Link href="/citizen/new">
             <PlusCircle className="mr-2 h-4 w-4" />
-            New Request
+            {t("citizen.new")}
           </Link>
         </Button>
       </div>
@@ -83,7 +83,7 @@ export default function CitizenDashboard() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search requests..."
+            placeholder={t("citizen.search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -91,15 +91,15 @@ export default function CitizenDashboard() {
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-[160px]">
-            <SelectValue placeholder="All statuses" />
+            <SelectValue placeholder={t("status.all")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="submitted">Submitted</SelectItem>
-            <SelectItem value="assigned">Assigned</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="resolved">Resolved</SelectItem>
-            <SelectItem value="closed">Closed</SelectItem>
+            <SelectItem value="all">{t("status.all")}</SelectItem>
+            <SelectItem value="submitted">{t("status.submitted")}</SelectItem>
+            <SelectItem value="assigned">{t("status.assigned")}</SelectItem>
+            <SelectItem value="in_progress">{t("status.in_progress")}</SelectItem>
+            <SelectItem value="resolved">{t("status.resolved")}</SelectItem>
+            <SelectItem value="closed">{t("status.closed")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -110,19 +110,19 @@ export default function CitizenDashboard() {
           <Inbox className="mb-3 h-10 w-10 text-muted-foreground" />
           <p className="mb-1 font-medium text-muted-foreground">
             {requests.length === 0
-              ? "No requests yet"
-              : "No matching requests"}
+              ? t("citizen.no_requests")
+              : t("citizen.no_match")}
           </p>
           <p className="text-sm text-muted-foreground">
             {requests.length === 0
-              ? "Report your first civic issue to get started."
-              : "Try adjusting your filters."}
+              ? t("citizen.first_report")
+              : t("citizen.adjust_filters")}
           </p>
           {requests.length === 0 && (
             <Button asChild className="mt-4" variant="outline">
               <Link href="/citizen/new">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Report Issue
+                {t("citizen.report_issue")}
               </Link>
             </Button>
           )}

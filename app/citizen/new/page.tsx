@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { Category, RequestPriority, AIValidation } from "@/lib/types"
+import { useTranslation } from "@/lib/i18n"
 import {
   ArrowLeft,
   Camera,
@@ -42,6 +43,7 @@ async function fetchCategories(): Promise<Category[]> {
 }
 
 export default function NewRequestPage() {
+  const { t } = useTranslation()
   const { data: categories = [] } = useSWR("categories", fetchCategories)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -63,10 +65,7 @@ export default function NewRequestPage() {
   const selectedCategory = categories.find((c) => c.id === categoryId)
 
   const detectLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error("Geolocation is not supported by your browser")
-      return
-    }
+    if (!navigator.geolocation) return
     setGeoLoading(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -74,12 +73,8 @@ export default function NewRequestPage() {
         setLongitude(pos.coords.longitude)
         setAddress(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`)
         setGeoLoading(false)
-        toast.success("Location detected")
       },
-      () => {
-        setGeoLoading(false)
-        toast.error("Unable to detect location")
-      }
+      () => { setGeoLoading(false) }
     )
   }
 
@@ -97,12 +92,8 @@ export default function NewRequestPage() {
 
   const resetValidation = () => setValidation(null)
 
-  // Step 1: Upload photo (if any) and call AI to validate
   const handleValidate = async () => {
-    if (!title.trim()) return toast.error("Please enter a title")
-    if (!description.trim()) return toast.error("Please describe the issue in detail")
-    if (!categoryId) return toast.error("Please select a category")
-
+    if (!title.trim() || !description.trim() || !categoryId) return
     setValidating(true)
     setValidation(null)
 
@@ -110,7 +101,6 @@ export default function NewRequestPage() {
       const supabase = createClient()
       let photoUrl = uploadedPhotoUrl
 
-      // Upload photo if not already uploaded
       if (photoFile && !photoUrl) {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
@@ -133,8 +123,7 @@ export default function NewRequestPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title,
-          description,
+          title, description,
           category: selectedCategory?.name || "Other",
           photo_url: photoUrl,
         }),
@@ -142,18 +131,10 @@ export default function NewRequestPage() {
 
       const result: AIValidation = await res.json()
       setValidation(result)
-
-      if (result.valid) {
-        setPriority(result.suggested_priority)
-        toast.success("Report validated - ready to submit!")
-      } else {
-        toast.error("Report rejected by AI")
-      }
+      if (result.valid) setPriority(result.suggested_priority)
     } catch {
-      toast.error("AI validation failed - you can try again")
       setValidation({
-        valid: true,
-        score: null,
+        valid: true, score: null,
         reason: "Validation service unavailable - report accepted for manual review",
         suggested_priority: priority,
       })
@@ -162,40 +143,24 @@ export default function NewRequestPage() {
     }
   }
 
-  // Step 2: Submit validated report to Supabase
   const handleSubmit = async () => {
-    if (!validation?.valid) return toast.error("Report must pass AI validation first")
-
+    if (!validation?.valid) return
     setIsSubmitting(true)
     try {
       const supabase = createClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) {
-        toast.error("Session expired. Please log in again.")
-        router.push("/auth/login")
-        return
-      }
+      if (authError || !user) { router.push("/auth/login"); return }
 
       const { error } = await supabase.from("service_requests").insert({
-        title: title.trim(),
-        description: description.trim() || null,
-        category_id: categoryId,
-        priority: validation.suggested_priority || priority,
-        citizen_id: user.id,
-        address: address.trim() || null,
-        latitude,
-        longitude,
-        photo_url: uploadedPhotoUrl,
-        ai_validation: validation,
+        title: title.trim(), description: description.trim() || null,
+        category_id: categoryId, priority: validation.suggested_priority || priority,
+        citizen_id: user.id, address: address.trim() || null,
+        latitude, longitude, photo_url: uploadedPhotoUrl, ai_validation: validation,
       })
-
       if (error) throw error
-
-      toast.success("Report submitted successfully!")
       router.push("/citizen")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Unknown error"
-      toast.error(`Submit failed: ${msg}`)
+      toast.error(err instanceof Error ? err.message : "Unknown error")
     } finally {
       setIsSubmitting(false)
     }
@@ -204,51 +169,31 @@ export default function NewRequestPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6">
-        <Link
-          href="/citizen"
-          className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
+        <Link href="/citizen" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
-          Back to requests
+          {t("new.back")}
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Report a Civic Issue</h1>
-        <p className="text-sm text-muted-foreground">
-          Describe the problem. AI will evaluate whether it warrants dispatching a city crew.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("new.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("new.subtitle")}</p>
       </div>
 
       <Card>
         <CardContent className="space-y-5 pt-6">
-          {/* Title */}
           <div className="grid gap-2">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              placeholder="e.g. Large pothole on Main Street"
-              required
-              value={title}
-              onChange={(e) => { setTitle(e.target.value); resetValidation() }}
-            />
+            <Label htmlFor="title">{t("new.field.title")}</Label>
+            <Input id="title" placeholder={t("new.field.title.placeholder")} required value={title} onChange={(e) => { setTitle(e.target.value); resetValidation() }} />
           </div>
 
-          {/* Description */}
           <div className="grid gap-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Provide specific details: what the issue is, exact location, severity, how many people are affected..."
-              rows={4}
-              value={description}
-              onChange={(e) => { setDescription(e.target.value); resetValidation() }}
-            />
+            <Label htmlFor="description">{t("new.field.description")}</Label>
+            <Textarea id="description" placeholder={t("new.field.description.placeholder")} rows={4} value={description} onChange={(e) => { setDescription(e.target.value); resetValidation() }} />
           </div>
 
-          {/* Category + Priority */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label>Category</Label>
+              <Label>{t("new.field.category")}</Label>
               <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); resetValidation() }}>
-                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("new.field.category.placeholder")} /></SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
@@ -257,117 +202,85 @@ export default function NewRequestPage() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Priority (AI may adjust)</Label>
+              <Label>{t("new.field.priority")}</Label>
               <Select value={priority} onValueChange={(v) => setPriority(v as RequestPriority)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="low">{t("priority.low")}</SelectItem>
+                  <SelectItem value="medium">{t("priority.medium")}</SelectItem>
+                  <SelectItem value="high">{t("priority.high")}</SelectItem>
+                  <SelectItem value="urgent">{t("priority.urgent")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Location */}
           <div className="grid gap-2">
-            <Label>Location</Label>
+            <Label>{t("new.field.location")}</Label>
             <div className="flex gap-2">
-              <Input
-                placeholder="Address or coordinates"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="flex-1"
-              />
+              <Input placeholder={t("new.field.location.placeholder")} value={address} onChange={(e) => setAddress(e.target.value)} className="flex-1" />
               <Button type="button" variant="outline" onClick={detectLocation} disabled={geoLoading}>
                 {geoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
               </Button>
             </div>
           </div>
 
-          {/* Photo */}
           <div className="grid gap-2">
-            <Label>Photo (recommended for faster validation)</Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoChange}
-              className="hidden"
-            />
+            <Label>{t("new.field.photo")}</Label>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
             <div className="flex items-center gap-3">
               <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
                 <Camera className="mr-2 h-4 w-4" />
-                {photoFile ? "Change Photo" : "Attach Photo"}
+                {photoFile ? t("new.photo.change") : t("new.photo.attach")}
               </Button>
-              {photoFile && (
-                <span className="text-sm text-muted-foreground">{photoFile.name}</span>
-              )}
+              {photoFile && <span className="text-sm text-muted-foreground">{photoFile.name}</span>}
             </div>
-            {photoPreview && (
-              <img src={photoPreview} alt="Preview" className="mt-2 h-40 w-full rounded-lg border object-cover" />
-            )}
+            {photoPreview && <img src={photoPreview} alt="Preview" className="mt-2 h-40 w-full rounded-lg border object-cover" />}
           </div>
 
-          {/* AI Validation Result */}
           {validation && (
             <Card className={`border-2 ${validation.valid ? "border-success bg-success/5" : "border-destructive bg-destructive/5"}`}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  {validation.valid ? (
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
-                  ) : (
-                    <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-                  )}
+                  {validation.valid ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" /> : <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />}
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-foreground">
-                      {validation.valid ? "Report Approved by AI" : "Report Rejected by AI"}
+                      {validation.valid ? t("new.ai.approved") : t("new.ai.rejected")}
                       <span className="ml-2 font-normal text-muted-foreground">
-                        (Severity: {validation.score != null ? `${validation.score}/10` : "NA"})
+                        ({t("new.ai.severity")}: {validation.score != null ? `${validation.score}/10` : "NA"})
                       </span>
                     </p>
                     <p className="text-sm text-muted-foreground">{validation.reason}</p>
                     {validation.valid && (
                       <p className="text-xs text-muted-foreground">
-                        AI-assigned priority: <span className="font-medium capitalize text-foreground">{validation.suggested_priority}</span>
+                        {t("new.ai.priority_set")}: <span className="font-medium capitalize text-foreground">{t(`priority.${validation.suggested_priority}`)}</span>
                       </p>
                     )}
-                    {!validation.valid && (
-                      <p className="mt-1 text-xs text-destructive">
-                        Edit your report details above and click &quot;Re-validate&quot; to try again.
-                      </p>
-                    )}
+                    {!validation.valid && <p className="mt-1 text-xs text-destructive">{t("new.ai.edit_hint")}</p>}
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Action Buttons */}
           <div className="flex flex-col gap-3 pt-2">
             {!validation?.valid && (
-              <Button
-                onClick={handleValidate}
-                disabled={validating || !title.trim() || !description.trim() || !categoryId}
-                className="w-full"
-              >
+              <Button onClick={handleValidate} disabled={validating || !title.trim() || !description.trim() || !categoryId} className="w-full">
                 {validating ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />AI is Reviewing...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("new.btn.validating")}</>
                 ) : validation && !validation.valid ? (
-                  <><AlertTriangle className="mr-2 h-4 w-4" />Re-validate Report</>
+                  <><AlertTriangle className="mr-2 h-4 w-4" />{t("new.btn.revalidate")}</>
                 ) : (
-                  <><BrainCircuit className="mr-2 h-4 w-4" />Validate with AI</>
+                  <><BrainCircuit className="mr-2 h-4 w-4" />{t("new.btn.validate")}</>
                 )}
               </Button>
             )}
-
             {validation?.valid && (
               <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
                 {isSubmitting ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("new.btn.submitting")}</>
                 ) : (
-                  <><Send className="mr-2 h-4 w-4" />Submit Validated Report</>
+                  <><Send className="mr-2 h-4 w-4" />{t("new.btn.submit")}</>
                 )}
               </Button>
             )}

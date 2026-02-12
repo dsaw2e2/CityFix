@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { useTranslation } from "@/lib/i18n"
 import type { UserRole } from "@/lib/types"
 import {
   Shield,
@@ -31,10 +33,10 @@ interface DashboardShellProps {
   levelBadge?: React.ReactNode
 }
 
-const ROLE_LABELS: Record<UserRole, { label: string; icon: React.ReactNode }> = {
-  citizen: { label: "Citizen", icon: <User className="h-4 w-4" /> },
-  worker: { label: "Field Worker", icon: <Wrench className="h-4 w-4" /> },
-  admin: { label: "Administrator", icon: <LayoutDashboard className="h-4 w-4" /> },
+const ROLE_ICONS: Record<UserRole, React.ReactNode> = {
+  citizen: <User className="h-4 w-4" />,
+  worker: <Wrench className="h-4 w-4" />,
+  admin: <LayoutDashboard className="h-4 w-4" />,
 }
 
 export function DashboardShell({
@@ -47,6 +49,7 @@ export function DashboardShell({
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+  const { t } = useTranslation()
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -54,7 +57,8 @@ export function DashboardShell({
     router.push("/")
   }
 
-  const roleInfo = ROLE_LABELS[role]
+  const roleLabel = t(`role.${role}`)
+  const roleIcon = ROLE_ICONS[role]
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -78,8 +82,8 @@ export function DashboardShell({
               <span className="text-lg font-bold tracking-tight">CityFix</span>
             </Link>
             <span className="hidden items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary md:flex">
-              {roleInfo.icon}
-              {roleInfo.label}
+              {roleIcon}
+              {roleLabel}
             </span>
           </div>
 
@@ -102,6 +106,7 @@ export function DashboardShell({
           </nav>
 
           <div className="flex items-center gap-3">
+            <LanguageSwitcher className="hidden md:flex" />
             {levelBadge && (
               <span className="hidden lg:block">{levelBadge}</span>
             )}
@@ -110,7 +115,7 @@ export function DashboardShell({
             </span>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
-              <span className="sr-only">Sign out</span>
+              <span className="sr-only">{t("nav.signout")}</span>
             </Button>
           </div>
         </div>
@@ -118,9 +123,12 @@ export function DashboardShell({
         {/* Mobile nav */}
         {mobileNavOpen && (
           <nav className="border-t bg-card px-4 py-2 md:hidden">
-            <div className="mb-2 flex items-center gap-2 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
-              {roleInfo.icon}
-              {roleInfo.label} &mdash; {userName}
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
+                {roleIcon}
+                {roleLabel} &mdash; {userName}
+              </div>
+              <LanguageSwitcher />
             </div>
             {levelBadge && <div className="mb-2">{levelBadge}</div>}
             {navItems.map((item) => (

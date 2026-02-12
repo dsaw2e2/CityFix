@@ -6,23 +6,25 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { FileText, PlusCircle, MapPin } from "lucide-react"
 import { CitizenLevelBadge } from "@/components/citizen-level-badge"
+import { useTranslation } from "@/lib/i18n"
 import type { Profile } from "@/lib/types"
-
-const navItems = [
-  { label: "My Requests", href: "/citizen", icon: <FileText className="h-4 w-4" /> },
-  { label: "New Request", href: "/citizen/new", icon: <PlusCircle className="h-4 w-4" /> },
-  { label: "Map", href: "/citizen/map", icon: <MapPin className="h-4 w-4" /> },
-]
 
 export default function CitizenLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { t } = useTranslation()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [reportCount, setReportCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+
+  const navItems = [
+    { label: t("nav.my_requests"), href: "/citizen", icon: <FileText className="h-4 w-4" /> },
+    { label: t("nav.new_request"), href: "/citizen/new", icon: <PlusCircle className="h-4 w-4" /> },
+    { label: t("nav.map"), href: "/citizen/map", icon: <MapPin className="h-4 w-4" /> },
+  ]
 
   useEffect(() => {
     async function loadProfile() {
@@ -62,7 +64,7 @@ export default function CitizenLayout({
   return (
     <DashboardShell
       role="citizen"
-      userName={profile?.full_name || "Citizen"}
+      userName={profile?.full_name || t("role.citizen")}
       navItems={navItems}
       levelBadge={<CitizenLevelBadge reportCount={reportCount} />}
     >

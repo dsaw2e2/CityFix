@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { Toaster } from "sonner"
+import { I18nProvider } from "@/lib/i18n"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
@@ -28,8 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
-        <Toaster position="top-right" richColors />
+        <I18nProvider>
+          {children}
+          <Toaster position="top-right" richColors />
+        </I18nProvider>
       </body>
     </html>
   )

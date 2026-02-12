@@ -11,12 +11,15 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { useTranslation } from "@/lib/i18n"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Shield, Loader2, Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -37,7 +40,6 @@ export default function LoginPage() {
       })
       if (signInError) throw signInError
 
-      // Fetch user role and redirect accordingly
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -50,17 +52,15 @@ export default function LoginPage() {
           .single()
 
         const role = profile?.role ?? "citizen"
-        // Hard navigate so middleware picks up fresh session cookie
         window.location.href = `/${role}`
         return
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "An error occurred"
-      // Make common errors more user-friendly
       if (msg.includes("Invalid login credentials")) {
-        setError("Wrong email or password. Please try again.")
+        setError(t("auth.error.wrong_creds"))
       } else if (msg.includes("Email not confirmed")) {
-        setError("Your email is not confirmed. Please contact support.")
+        setError(t("auth.error.not_confirmed"))
       } else {
         setError(msg)
       }
@@ -79,18 +79,17 @@ export default function LoginPage() {
               CityFix
             </span>
           </div>
+          <LanguageSwitcher />
           <Card className="w-full">
             <CardHeader className="text-center">
-              <CardTitle className="text-xl">Welcome back</CardTitle>
-              <CardDescription>
-                Sign in to your eGov account
-              </CardDescription>
+              <CardTitle className="text-xl">{t("auth.welcome")}</CardTitle>
+              <CardDescription>{t("auth.signin.desc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin}>
                 <div className="flex flex-col gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{t("auth.email")}</Label>
                     <Input
                       id="email"
                       type="email"
@@ -101,7 +100,7 @@ export default function LoginPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">{t("auth.password")}</Label>
                     <div className="relative">
                       <Input
                         id="password"
@@ -123,28 +122,24 @@ export default function LoginPage() {
                   {error && (
                     <p className="text-sm font-medium text-destructive">{error}</p>
                   )}
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
+                  <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
+                        {t("auth.signing_in")}
                       </>
                     ) : (
-                      "Sign in"
+                      t("auth.signin")
                     )}
                   </Button>
                 </div>
                 <div className="mt-4 text-center text-sm">
-                  {"Don't have an account? "}
+                  {t("auth.no_account")}{" "}
                   <Link
                     href="/auth/sign-up"
                     className="text-primary underline underline-offset-4"
                   >
-                    Create account
+                    {t("auth.create_account")}
                   </Link>
                 </div>
               </form>

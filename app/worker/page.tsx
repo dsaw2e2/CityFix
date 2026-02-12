@@ -37,6 +37,7 @@ import {
   HandMetal,
   ListTodo,
 } from "lucide-react"
+import { useTranslation } from "@/lib/i18n"
 import { formatDistanceToNow } from "date-fns"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
@@ -80,11 +81,12 @@ async function fetchAvailableTasks(): Promise<ServiceRequest[]> {
 }
 
 function VerificationResult({ result }: { result: AIVerification }) {
+  const { t } = useTranslation()
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="mb-3 flex items-center gap-2">
         <BrainCircuit className="h-5 w-5 text-primary" />
-        <span className="text-sm font-semibold">AI Verification Result</span>
+        <span className="text-sm font-semibold">{t("worker.ai_result")}</span>
       </div>
       <div className="mb-3 flex items-center gap-4">
         <div className="flex items-center gap-1.5">
@@ -94,7 +96,7 @@ function VerificationResult({ result }: { result: AIVerification }) {
             <XCircle className="h-5 w-5 text-destructive" />
           )}
           <span className={`text-sm font-medium ${result.resolved ? "text-success" : "text-destructive"}`}>
-            {result.resolved ? "Issue Resolved" : "Not Fully Resolved"}
+            {result.resolved ? t("worker.issue_resolved") : t("worker.not_resolved")}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -111,6 +113,7 @@ function VerificationResult({ result }: { result: AIVerification }) {
 
 /* ── Available task card (claim it) ── */
 function AvailableTaskCard({ task }: { task: ServiceRequest }) {
+  const { t } = useTranslation()
   const [isClaiming, setIsClaiming] = useState(false)
 
   const handleClaim = async () => {

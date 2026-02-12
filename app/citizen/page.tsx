@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { ServiceRequest, RequestStatus } from "@/lib/types"
+import { CitizenLevelCard } from "@/components/citizen-level-card"
 import { PlusCircle, Search, Inbox } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -58,6 +59,10 @@ export default function CitizenDashboard() {
 
   return (
     <div>
+      <div className="mb-6">
+        <CitizenLevelCard reportCount={requests.length} />
+      </div>
+
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">My Requests</h1>

@@ -28,6 +28,7 @@ interface DashboardShellProps {
   role: UserRole
   userName: string
   navItems: NavItem[]
+  levelBadge?: React.ReactNode
 }
 
 const ROLE_LABELS: Record<UserRole, { label: string; icon: React.ReactNode }> = {
@@ -41,6 +42,7 @@ export function DashboardShell({
   role,
   userName,
   navItems,
+  levelBadge,
 }: DashboardShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const router = useRouter()
@@ -100,6 +102,9 @@ export function DashboardShell({
           </nav>
 
           <div className="flex items-center gap-3">
+            {levelBadge && (
+              <span className="hidden lg:block">{levelBadge}</span>
+            )}
             <span className="hidden text-sm text-muted-foreground lg:block">
               {userName}
             </span>
@@ -117,6 +122,7 @@ export function DashboardShell({
               {roleInfo.icon}
               {roleInfo.label} &mdash; {userName}
             </div>
+            {levelBadge && <div className="mb-2">{levelBadge}</div>}
             {navItems.map((item) => (
               <Link
                 key={item.href}

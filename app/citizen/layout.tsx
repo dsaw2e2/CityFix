@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { FileText, PlusCircle, MapPin } from "lucide-react"
+import { CitizenLevelBadge } from "@/components/citizen-level-badge"
 import type { Profile } from "@/lib/types"
 
 const navItems = [
@@ -19,6 +20,7 @@ export default function CitizenLayout({
   children: React.ReactNode
 }) {
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [reportCount, setReportCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -38,6 +40,12 @@ export default function CitizenLayout({
         .eq("id", user.id)
         .single()
       if (data) setProfile(data)
+
+      const { count } = await supabase
+        .from("service_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("citizen_id", user.id)
+      setReportCount(count ?? 0)
       setLoading(false)
     }
     loadProfile()
@@ -56,6 +64,7 @@ export default function CitizenLayout({
       role="citizen"
       userName={profile?.full_name || "Citizen"}
       navItems={navItems}
+      levelBadge={<CitizenLevelBadge reportCount={reportCount} />}
     >
       {children}
     </DashboardShell>

@@ -1,16 +1,55 @@
-import { generateText, Output } from "ai"
-import { z } from "zod"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
 export const maxDuration = 60
 
-const verificationSchema = z.object({
-  resolved: z.boolean().describe("Whether the issue appears to be resolved"),
-  score: z.number().min(1).max(10).describe("Quality of work score 1-10"),
-  comment: z.string().describe("Brief comment about what you see, in the same language as the request context"),
-})
+async function callGeminiWithImages(
+  systemPrompt: string,
+  parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }>
+) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: "user", parts }],
+        generationConfig: {
+          response_mime_type: "application/json",
+          response_schema: {
+            type: "OBJECT",
+            properties: {
+              resolved: { type: "BOOLEAN" },
+              score: { type: "INTEGER" },
+              comment: { type: "STRING" },
+            },
+            required: ["resolved", "score", "comment"],
+          },
+        },
+      }),
+    }
+  )
+
+  if (!response.ok) {
+    const errText = await response.text()
+    throw new Error(`Gemini API error ${response.status}: ${errText}`)
+  }
+
+  const data = await response.json()
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!text) throw new Error("Empty response from Gemini")
+  return JSON.parse(text)
+}
+
+async function imageUrlToBase64Part(url: string) {
+  const res = await fetch(url)
+  const buffer = await res.arrayBuffer()
+  const base64 = Buffer.from(buffer).toString("base64")
+  const mimeType = res.headers.get("content-type") || "image/jpeg"
+  return { inline_data: { mime_type: mimeType, data: base64 } }
+}
 
 export async function POST(request: Request) {
   try {
@@ -32,31 +71,22 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
+          getAll() { return cookieStore.getAll() },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) => {
-              try {
-                cookieStore.set(name, value, options)
-              } catch {
-                // ignore
-              }
+              try { cookieStore.set(name, value, options) } catch { /* ignore */ }
             })
           },
         },
       }
     )
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Upload the "after" photo to Supabase storage
+    // Upload after photo
     const ext = afterFile.name.split(".").pop() || "jpg"
     const filePath = `${user.id}/after_${Date.now()}.${ext}`
     const arrayBuffer = await afterFile.arrayBuffer()
@@ -70,47 +100,42 @@ export async function POST(request: Request) {
       })
 
     if (uploadError) {
-      return NextResponse.json(
-        { error: `Upload failed: ${uploadError.message}` },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 })
     }
 
-    const {
-      data: { publicUrl: afterUrl },
-    } = supabase.storage.from("request-photos").getPublicUrl(filePath)
+    const { data: { publicUrl: afterUrl } } = supabase.storage
+      .from("request-photos")
+      .getPublicUrl(filePath)
 
-    // Build message content with images
-    const userContent: Array<{ type: "text"; text: string } | { type: "image"; image: URL }> = []
-
-    const promptText = beforeUrl
-      ? "Compare the BEFORE photo and AFTER photo of a civic issue repair (pothole, trash, graffiti, etc.). Determine if the issue is resolved and rate the quality of work."
-      : "Analyze this AFTER photo of a completed civic maintenance job. Determine if the issue appears resolved and rate the quality of work."
-
-    userContent.push({ type: "text", text: promptText })
+    // Build parts for Gemini
+    const parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }> = []
 
     if (beforeUrl) {
-      userContent.push({ type: "image", image: new URL(beforeUrl) })
-      userContent.push({ type: "text", text: "Above is the BEFORE photo." })
+      parts.push({ text: "Compare the BEFORE and AFTER photos of a civic issue repair. Determine if resolved and rate work quality 1-10." })
+      try {
+        parts.push(await imageUrlToBase64Part(beforeUrl))
+        parts.push({ text: "Above: BEFORE photo." })
+      } catch { /* skip */ }
+    } else {
+      parts.push({ text: "Analyze this AFTER photo of a completed civic maintenance job. Determine if resolved and rate work quality 1-10." })
     }
 
-    userContent.push({ type: "image", image: new URL(afterUrl) })
-    userContent.push({ type: "text", text: "Above is the AFTER photo." })
+    try {
+      parts.push(await imageUrlToBase64Part(afterUrl))
+      parts.push({ text: "Above: AFTER photo." })
+    } catch { /* skip */ }
 
     let verification: { resolved: boolean; score: number; comment: string }
 
     try {
-      const { output } = await generateText({
-        model: "google/gemini-2.5-flash",
-        output: Output.object({ schema: verificationSchema }),
-        system: "You are an AI inspector for a municipal service request system. Evaluate work completion quality.",
-        messages: [{ role: "user", content: userContent }],
-      })
-
-      verification = output ?? {
-        resolved: false,
-        score: 0,
-        comment: "Could not parse AI response",
+      const result = await callGeminiWithImages(
+        "You are an AI inspector for a municipal service system. Evaluate work completion quality. Respond in the same language as context.",
+        parts
+      )
+      verification = {
+        resolved: !!result.resolved,
+        score: Number(result.score) || 0,
+        comment: result.comment || "",
       }
     } catch (aiErr) {
       console.error("[verify-report] AI error:", aiErr)
@@ -121,29 +146,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // Store verification result on the service request
+    // Store result
     const { error: dbError } = await supabase
       .from("service_requests")
       .update({ ai_verification: verification })
       .eq("id", requestId)
 
-    if (dbError) {
-      console.error("[verify-report] DB update error:", dbError)
-    }
+    if (dbError) console.error("[verify-report] DB error:", dbError)
 
-    return NextResponse.json({
-      verification,
-      after_url: afterUrl,
-    })
+    return NextResponse.json({ verification, after_url: afterUrl })
   } catch (err) {
     console.error("[verify-report] Error:", err)
     return NextResponse.json(
-      {
-        error:
-          err instanceof Error
-            ? `Server error: ${err.message}`
-            : "Internal server error",
-      },
+      { error: err instanceof Error ? err.message : "Internal server error" },
       { status: 500 }
     )
   }

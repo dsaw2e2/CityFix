@@ -1,6 +1,5 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "@/lib/i18n"
@@ -19,13 +18,9 @@ import useSWR, { mutate } from "swr"
 import { useState } from "react"
 
 async function fetchRankings(): Promise<WorkerRanking[]> {
-  const supabase = createClient()
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, full_name, completed_tasks, sla_violations, average_rating, total_score")
-    .eq("role", "worker")
-    .order("total_score", { ascending: false })
-  return (data ?? []) as WorkerRanking[]
+  const res = await fetch("/api/workers/rankings")
+  if (!res.ok) return []
+  return res.json()
 }
 
 function getRankIcon(index: number) {

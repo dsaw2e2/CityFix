@@ -1,20 +1,20 @@
+import { generateText, Output } from "ai"
+import { z } from "zod"
 import { NextRequest, NextResponse } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export const maxDuration = 60
 
-export async function POST(req: NextRequest) {
-  const apiKey = process.env.GOOGLE_AI_API_KEY
-  if (!apiKey) {
-    console.error("[validate-report] GOOGLE_AI_API_KEY not configured!")
-    return NextResponse.json({ error: "AI service not configured" }, { status: 500 })
-  }
+const validationSchema = z.object({
+  valid: z.boolean().describe("Whether this is a valid civic issue"),
+  score: z.number().min(1).max(10).describe("Severity score 1-10"),
+  reason: z.string().describe("Brief 1-2 sentence explanation in the same language as the report"),
+  suggested_priority: z.enum(["low", "medium", "high", "urgent"]).describe("Suggested priority level"),
+})
 
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { title, description, category, photo_url } = body
-
-    console.log("[validate-report] Validating report:", { title, category, hasPhoto: !!photo_url })
 
     if (!title || !description || !category) {
       return NextResponse.json(
@@ -23,77 +23,56 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
+    const systemPrompt = `You are an AI moderator for CityFix, a 311-style municipal service request platform.
 
-    const prompt = `You are an AI moderator for a 311-style municipal service request platform called CityFix.
+Evaluate whether the citizen's report is a VALID civic issue that warrants dispatching city workers.
 
-A citizen has submitted a report. Your job is to evaluate whether this is a VALID civic issue that warrants dispatching city workers.
+REJECT (score 1-3, valid=false):
+- Trivially insignificant issues
+- Not a civic/municipal matter
+- Spam, jokes, gibberish, test submissions
+- Too vague to act on
 
-REJECT reports that are:
-- Trivially insignificant (e.g., "one small bottle on the road", "a single leaf on the sidewalk")
-- Not a civic/municipal matter (personal complaints, business disputes, neighbor arguments)
-- Spam, jokes, gibberish, or test submissions
-- Too vague to act on with no useful details
-- Duplicate-sounding generic reports
-
-ACCEPT reports that are:
-- Real infrastructure problems (potholes, broken streetlights, water leaks, damaged sidewalks)
+ACCEPT (score 4-10, valid=true):
+- Real infrastructure problems (potholes, broken streetlights, water leaks)
 - Public safety hazards
-- Sanitation issues (overflowing bins, illegal dumping, significant trash accumulation)
-- Issues that affect multiple people or public spaces
-- Clearly described with enough detail to locate and address
+- Sanitation issues (overflowing bins, illegal dumping)
+- Issues affecting public spaces
 
-Report details:
-- Title: ${title}
-- Description: ${description}
-- Category: ${category}
+Score guide: 1-3 = reject, 4-5 = borderline accept, 6-8 = valid, 9-10 = urgent/critical.
+ALWAYS respond in the SAME LANGUAGE as the report.`
 
-Respond with ONLY valid JSON (no markdown, no code blocks):
-{
-  "valid": true/false,
-  "score": 1-10,
-  "reason": "Brief 1-2 sentence explanation in the same language as the report",
-  "suggested_priority": "low" | "medium" | "high" | "urgent"
-}
-
-Score guide: 1-3 = reject (trivial/invalid), 4-5 = borderline, 6-8 = valid issue, 9-10 = urgent/critical.
-Set valid=true only if score >= 4.`
-
-    // Build parts array for Gemini
-    const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
-      { text: prompt },
+    const userContent: Array<{ type: "text"; text: string } | { type: "image"; image: URL }> = [
+      {
+        type: "text" as const,
+        text: `Report details:\n- Title: ${title}\n- Description: ${description}\n- Category: ${category}\n\nEvaluate this report.`,
+      },
     ]
 
-    // If there's a photo, fetch it and convert to base64
     if (photo_url) {
-      try {
-        const imgRes = await fetch(photo_url)
-        if (imgRes.ok) {
-          const buf = await imgRes.arrayBuffer()
-          if (buf.byteLength < 4 * 1024 * 1024) {
-            const b64 = Buffer.from(buf).toString("base64")
-            const mime = imgRes.headers.get("content-type") || "image/jpeg"
-            parts.push({ inlineData: { mimeType: mime, data: b64 } })
-            parts.push({
-              text: "Above is the photo attached to this report. Factor it into your assessment - does the photo show a real civic issue?",
-            })
-          }
-        }
-      } catch (imgErr) {
-        console.error("[validate-report] Photo fetch error:", imgErr)
-      }
+      userContent.push({
+        type: "image" as const,
+        image: new URL(photo_url),
+      })
+      userContent.push({
+        type: "text" as const,
+        text: "Above is the photo attached to this report. Factor it into your assessment.",
+      })
     }
 
-    const result = await model.generateContent(parts)
-    const rawText = result.response.text()
+    const { output } = await generateText({
+      model: "google/gemini-2.5-flash",
+      output: Output.object({ schema: validationSchema }),
+      system: systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: userContent,
+        },
+      ],
+    })
 
-    console.log("[validate-report] Raw AI response:", rawText)
-
-    // Parse JSON from Gemini response
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      console.error("[validate-report] Could not extract JSON from response:", rawText)
+    if (!output) {
       return NextResponse.json({
         valid: true,
         score: null,
@@ -102,27 +81,18 @@ Set valid=true only if score >= 4.`
       })
     }
 
-    const parsed = JSON.parse(jsonMatch[0])
-    console.log("[validate-report] Parsed result:", parsed)
-
     return NextResponse.json({
-      valid: Boolean(parsed.valid),
-      score: Math.min(10, Math.max(1, Number(parsed.score) || 5)),
-      reason: String(parsed.reason || "No reason provided"),
-      suggested_priority: ["low", "medium", "high", "urgent"].includes(
-        parsed.suggested_priority
-      )
-        ? parsed.suggested_priority
-        : "medium",
+      valid: output.valid,
+      score: output.score,
+      reason: output.reason,
+      suggested_priority: output.suggested_priority,
     })
   } catch (err) {
-    console.error("[validate-report] Validation error:", err)
-    console.error("[validate-report] Error stack:", err instanceof Error ? err.stack : "No stack trace")
-    // On any error, let report through
+    console.error("[validate-report] Error:", err)
     return NextResponse.json({
       valid: true,
       score: null,
-      reason: "Validation error - report accepted for manual review",
+      reason: "Validation service temporarily unavailable - report accepted for manual review",
       suggested_priority: "medium",
     })
   }

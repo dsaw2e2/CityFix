@@ -1,9 +1,16 @@
+import { generateText, Output } from "ai"
+import { z } from "zod"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export const maxDuration = 60
+
+const verificationSchema = z.object({
+  resolved: z.boolean().describe("Whether the issue appears to be resolved"),
+  score: z.number().min(1).max(10).describe("Quality of work score 1-10"),
+  comment: z.string().describe("Brief comment about what you see, in the same language as the request context"),
+})
 
 export async function POST(request: Request) {
   try {
@@ -73,73 +80,44 @@ export async function POST(request: Request) {
       data: { publicUrl: afterUrl },
     } = supabase.storage.from("request-photos").getPublicUrl(filePath)
 
-    // Check Google AI key
-    const apiKey = process.env.GOOGLE_AI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "GOOGLE_AI_API_KEY not configured. Add it in the Vars section." },
-        { status: 500 }
-      )
-    }
+    // Build message content with images
+    const userContent: Array<{ type: "text"; text: string } | { type: "image"; image: URL }> = []
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
+    const promptText = beforeUrl
+      ? "Compare the BEFORE photo and AFTER photo of a civic issue repair (pothole, trash, graffiti, etc.). Determine if the issue is resolved and rate the quality of work."
+      : "Analyze this AFTER photo of a completed civic maintenance job. Determine if the issue appears resolved and rate the quality of work."
 
-    const prompt = `You are an AI inspector for a municipal 311-style service request system.
-${beforeUrl ? "Compare the BEFORE photo and AFTER photo of a civic issue (pothole, trash, graffiti, etc.)." : "Analyze this AFTER photo of a completed civic maintenance job."}
+    userContent.push({ type: "text", text: promptText })
 
-Determine:
-1. Is the issue resolved? (true/false)
-2. Rate the quality of work from 1 to 10.
-3. Brief comment about what you see.
-
-Return STRICTLY valid JSON only, no markdown, no backticks:
-{"resolved": true, "score": 8, "comment": "The pothole has been properly filled and paved."}`
-
-    // Build parts array for Gemini
-    const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
-      { text: prompt },
-    ]
-
-    // Add "before" image if available - convert to base64
     if (beforeUrl) {
-      try {
-        const beforeRes = await fetch(beforeUrl)
-        if (beforeRes.ok) {
-          const beforeBuf = await beforeRes.arrayBuffer()
-          if (beforeBuf.byteLength < 4 * 1024 * 1024) {
-            const b64 = Buffer.from(beforeBuf).toString("base64")
-            const mime = beforeRes.headers.get("content-type") || "image/jpeg"
-            parts.push({ inlineData: { mimeType: mime, data: b64 } })
-          }
-        }
-      } catch (imgErr) {
-        console.error("[verify-report] Before photo fetch error:", imgErr)
-      }
+      userContent.push({ type: "image", image: new URL(beforeUrl) })
+      userContent.push({ type: "text", text: "Above is the BEFORE photo." })
     }
 
-    // Add "after" image as base64
-    if (arrayBuffer.byteLength < 4 * 1024 * 1024) {
-      const afterBase64 = Buffer.from(arrayBuffer).toString("base64")
-      const afterMime = afterFile.type || "image/jpeg"
-      parts.push({ inlineData: { mimeType: afterMime, data: afterBase64 } })
-    }
+    userContent.push({ type: "image", image: new URL(afterUrl) })
+    userContent.push({ type: "text", text: "Above is the AFTER photo." })
 
     let verification: { resolved: boolean; score: number; comment: string }
+
     try {
-      const result = await model.generateContent(parts)
-      const rawText = result.response.text()
+      const { output } = await generateText({
+        model: "google/gemini-2.5-flash",
+        output: Output.object({ schema: verificationSchema }),
+        system: "You are an AI inspector for a municipal service request system. Evaluate work completion quality.",
+        messages: [{ role: "user", content: userContent }],
+      })
 
-      console.log("[verify-report] Raw AI response:", rawText)
-
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-      verification = JSON.parse(jsonMatch?.[0] ?? rawText)
-    } catch (aiErr) {
-      console.error("[verify-report] Gemini error:", aiErr)
-      verification = {
+      verification = output ?? {
         resolved: false,
         score: 0,
         comment: "Could not parse AI response",
+      }
+    } catch (aiErr) {
+      console.error("[verify-report] AI error:", aiErr)
+      verification = {
+        resolved: false,
+        score: 0,
+        comment: "AI verification temporarily unavailable",
       }
     }
 
@@ -150,7 +128,7 @@ Return STRICTLY valid JSON only, no markdown, no backticks:
       .eq("id", requestId)
 
     if (dbError) {
-      console.error("[v0] DB update error:", dbError)
+      console.error("[verify-report] DB update error:", dbError)
     }
 
     return NextResponse.json({
@@ -158,7 +136,7 @@ Return STRICTLY valid JSON only, no markdown, no backticks:
       after_url: afterUrl,
     })
   } catch (err) {
-    console.error("[v0] Verify report error:", err)
+    console.error("[verify-report] Error:", err)
     return NextResponse.json(
       {
         error:

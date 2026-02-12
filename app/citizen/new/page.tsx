@@ -33,13 +33,19 @@ import { toast } from "sonner"
 import useSWR from "swr"
 
 async function fetchCategories(): Promise<Category[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .order("name")
-  if (error) return []
-  return (data ?? []) as Category[]
+  try {
+    const res = await fetch("/api/categories")
+    if (!res.ok) throw new Error("Failed")
+    return await res.json()
+  } catch {
+    // Fallback: try direct Supabase client
+    const supabase = createClient()
+    const { data } = await supabase
+      .from("categories")
+      .select("*")
+      .order("name")
+    return (data ?? []) as Category[]
+  }
 }
 
 export default function NewRequestPage() {
@@ -193,8 +199,10 @@ export default function NewRequestPage() {
             <div className="grid gap-2">
               <Label>{t("new.field.category")}</Label>
               <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); resetValidation() }}>
-                <SelectTrigger><SelectValue placeholder={t("new.field.category.placeholder")} /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger disabled={categories.length === 0}>
+                  <SelectValue placeholder={categories.length === 0 ? "..." : t("new.field.category.placeholder")} />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4} className="z-[200]">
                   {categories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                   ))}

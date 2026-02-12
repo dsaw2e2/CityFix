@@ -6,13 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+
 import type { Category, RequestPriority, AIValidation } from "@/lib/types"
 import { useTranslation } from "@/lib/i18n"
 import {
@@ -198,28 +192,36 @@ export default function NewRequestPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>{t("new.field.category")}</Label>
-              <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); resetValidation() }}>
-                <SelectTrigger disabled={categories.length === 0}>
-                  <SelectValue placeholder={categories.length === 0 ? "..." : t("new.field.category.placeholder")} />
-                </SelectTrigger>
-                <SelectContent position="popper" sideOffset={4} className="z-[200]">
+              {categories.length === 0 ? (
+                <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t("new.field.category.placeholder")}
+                </div>
+              ) : (
+                <select
+                  value={categoryId}
+                  onChange={(e) => { setCategoryId(e.target.value); resetValidation() }}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="">{t("new.field.category.placeholder")}</option>
                   {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
-                </SelectContent>
-              </Select>
+                </select>
+              )}
             </div>
             <div className="grid gap-2">
               <Label>{t("new.field.priority")}</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as RequestPriority)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">{t("priority.low")}</SelectItem>
-                  <SelectItem value="medium">{t("priority.medium")}</SelectItem>
-                  <SelectItem value="high">{t("priority.high")}</SelectItem>
-                  <SelectItem value="urgent">{t("priority.urgent")}</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as RequestPriority)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="low">{t("priority.low")}</option>
+                <option value="medium">{t("priority.medium")}</option>
+                <option value="high">{t("priority.high")}</option>
+                <option value="urgent">{t("priority.urgent")}</option>
+              </select>
             </div>
           </div>
 

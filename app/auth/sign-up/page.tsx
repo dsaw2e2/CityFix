@@ -93,13 +93,23 @@ export default function SignUpPage() {
       if (signUpError) throw signUpError
 
       if (data.user) {
+        // Auto-confirmed: session is returned immediately
         if (data.session) {
-          const dest = `/${role}`
-          window.location.href = dest
+          window.location.href = `/${role}`
           return
         }
 
+        // User was created (has identities) but no session yet — try signing in
         if (data.user.identities && data.user.identities.length > 0) {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
+          if (!signInError) {
+            window.location.href = `/${role}`
+            return
+          }
+          // If auto-sign-in fails, fallback to success page
           router.push("/auth/sign-up-success")
           return
         }

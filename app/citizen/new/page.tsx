@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
-import type { Category, RequestPriority, AIValidation } from "@/lib/types"
+import type { RequestPriority, AIValidation } from "@/lib/types"
 import { useTranslation } from "@/lib/i18n"
 import {
   ArrowLeft,
@@ -22,29 +22,40 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-import useSWR from "swr"
 
-async function fetchCategories(): Promise<Category[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .order("name")
-  if (error) throw error
-  return (data ?? []) as Category[]
+interface CategoryOption {
+  id: string
+  name: string
 }
 
 export default function NewRequestPage() {
   const { t } = useTranslation()
-  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useSWR("categories", fetchCategories, {
-    revalidateOnFocus: false,
-    shouldRetryOnError: true,
-    errorRetryCount: 3,
-  })
+  const [categories, setCategories] = useState<CategoryOption[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
 
-  console.log("[v0] categories SWR state:", { categoriesLoading, categoriesError: categoriesError?.message, count: categories.length })
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from("categories")
+          .select("id, name")
+          .order("name")
+        if (!cancelled && data && !error) {
+          setCategories(data)
+        }
+      } catch (e) {
+        console.log("[v0] categories fetch error:", e)
+      } finally {
+        if (!cancelled) setCategoriesLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [categoryId, setCategoryId] = useState("")

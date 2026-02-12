@@ -326,13 +326,13 @@ export default function AdminRequestsPage() {
                       <BrainCircuit className="h-3 w-3" />
                       Work: {r.ai_verification.resolved ? "Verified" : "Not Done"}
                       <Star className="ml-0.5 h-3 w-3" />
-                      {r.ai_verification.score}/10
+                      {r.ai_verification.score != null ? `${r.ai_verification.score}/10` : "NA"}
                     </span>
                   )}
                   {r.ai_validation && (
                     <span className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${r.ai_validation.valid ? "bg-primary/10 text-primary" : "bg-destructive/15 text-destructive"}`}>
                       <BrainCircuit className="h-3 w-3" />
-                      Report: {r.ai_validation.valid ? "Valid" : "Rejected"} ({r.ai_validation.score}/10)
+                      Report: {r.ai_validation.valid ? "Valid" : "Rejected"} ({r.ai_validation.score != null ? `${r.ai_validation.score}/10` : "NA"})
                     </span>
                   )}
                 </div>

@@ -92,7 +92,7 @@ export default function WorkerHistoryPage() {
                           <XCircle className="h-3.5 w-3.5 text-destructive" />
                         )}
                         <Star className="h-3 w-3 text-warning" />
-                        <span className="text-xs font-bold">{task.ai_verification.score}/10</span>
+                        <span className="text-xs font-bold">{task.ai_verification.score != null ? `${task.ai_verification.score}/10` : "NA"}</span>
                       </div>
                     </div>
                     <Progress value={task.ai_verification.score * 10} className="mb-1.5 h-1.5" />

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = process.env.GOOGLE_AI_API_KEY
   if (!apiKey) {
-    console.error("[validate-report] OPENAI_API_KEY not configured!")
+    console.error("[validate-report] GOOGLE_AI_API_KEY not configured!")
     return NextResponse.json({ error: "AI service not configured" }, { status: 500 })
   }
 
@@ -22,12 +23,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Build GPT-4o messages with vision
-    const content: Array<Record<string, unknown>> = []
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
-    content.push({
-      type: "text",
-      text: `You are an AI moderator for a 311-style municipal service request platform called CityFix.
+    const prompt = `You are an AI moderator for a 311-style municipal service request platform called CityFix.
 
 A citizen has submitted a report. Your job is to evaluate whether this is a VALID civic issue that warrants dispatching city workers.
 
@@ -59,10 +58,14 @@ Respond with ONLY valid JSON (no markdown, no code blocks):
 }
 
 Score guide: 1-3 = reject (trivial/invalid), 4-5 = borderline, 6-8 = valid issue, 9-10 = urgent/critical.
-Set valid=true only if score >= 4.`,
-    })
+Set valid=true only if score >= 4.`
 
-    // If there's a photo, fetch it and convert to base64 for reliable delivery
+    // Build parts array for Gemini
+    const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+      { text: prompt },
+    ]
+
+    // If there's a photo, fetch it and convert to base64
     if (photo_url) {
       try {
         const imgRes = await fetch(photo_url)
@@ -71,59 +74,29 @@ Set valid=true only if score >= 4.`,
           if (buf.byteLength < 4 * 1024 * 1024) {
             const b64 = Buffer.from(buf).toString("base64")
             const mime = imgRes.headers.get("content-type") || "image/jpeg"
-            content.push({
-              type: "image_url",
-              image_url: { url: `data:${mime};base64,${b64}`, detail: "low" },
-            })
-            content.push({
-              type: "text",
+            parts.push({ inlineData: { mimeType: mime, data: b64 } })
+            parts.push({
               text: "Above is the photo attached to this report. Factor it into your assessment - does the photo show a real civic issue?",
             })
           }
         }
       } catch (imgErr) {
-        console.error("[v0] Photo fetch error:", imgErr)
+        console.error("[validate-report] Photo fetch error:", imgErr)
       }
     }
 
-    const gptRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [{ role: "user", content }],
-        temperature: 0.3,
-        max_tokens: 500,
-      }),
-    })
-
-    if (!gptRes.ok) {
-      const errText = await gptRes.text()
-      console.error("[validate-report] OpenAI API error:", gptRes.status, errText)
-      // On AI failure, let the report through for manual review
-      return NextResponse.json({
-        valid: true,
-        score: 5,
-        reason: `AI validation unavailable (${gptRes.status}) - report accepted for manual review`,
-        suggested_priority: "medium",
-      })
-    }
-
-    const gptData = await gptRes.json()
-    const rawText = gptData?.choices?.[0]?.message?.content || ""
+    const result = await model.generateContent(parts)
+    const rawText = result.response.text()
 
     console.log("[validate-report] Raw AI response:", rawText)
 
-    // Parse JSON from GPT response
+    // Parse JSON from Gemini response
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       console.error("[validate-report] Could not extract JSON from response:", rawText)
       return NextResponse.json({
         valid: true,
-        score: 5,
+        score: null,
         reason: "Could not parse AI response - report accepted for manual review",
         suggested_priority: "medium",
       })
@@ -148,7 +121,7 @@ Set valid=true only if score >= 4.`,
     // On any error, let report through
     return NextResponse.json({
       valid: true,
-      score: 5,
+      score: null,
       reason: "Validation error - report accepted for manual review",
       suggested_priority: "medium",
     })

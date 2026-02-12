@@ -27,7 +27,7 @@ export interface AIVerification {
 
 export interface AIValidation {
   valid: boolean
-  score: number
+  score: number | null
   reason: string
   suggested_priority: RequestPriority
 }

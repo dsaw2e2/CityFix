@@ -153,7 +153,7 @@ export default function NewRequestPage() {
       toast.error("AI validation failed - you can try again")
       setValidation({
         valid: true,
-        score: 5,
+        score: null,
         reason: "Validation service unavailable - report accepted for manual review",
         suggested_priority: priority,
       })
@@ -324,7 +324,7 @@ export default function NewRequestPage() {
                     <p className="text-sm font-semibold text-foreground">
                       {validation.valid ? "Report Approved by AI" : "Report Rejected by AI"}
                       <span className="ml-2 font-normal text-muted-foreground">
-                        (Severity: {validation.score}/10)
+                        (Severity: {validation.score != null ? `${validation.score}/10` : "NA"})
                       </span>
                     </p>
                     <p className="text-sm text-muted-foreground">{validation.reason}</p>

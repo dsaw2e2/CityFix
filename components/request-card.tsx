@@ -55,7 +55,7 @@ export function RequestCard({ request, onClick }: RequestCardProps) {
           {request.ai_validation && (
             <span className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${request.ai_validation.valid ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
               <BrainCircuit className="h-3 w-3" />
-              AI: {request.ai_validation.score}/10
+              AI: {request.ai_validation.score != null ? `${request.ai_validation.score}/10` : "NA"}
             </span>
           )}
         </div>

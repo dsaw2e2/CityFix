@@ -11,43 +11,54 @@ async function callGeminiWithImages(
   const apiKey = process.env.GOOGLE_AI_API_KEY
   if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not set")
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: "user", parts }],
-        generationConfig: {
-          response_mime_type: "application/json",
-          response_schema: {
-            type: "OBJECT",
-            properties: {
-              resolved: { type: "BOOLEAN" },
-              score: { type: "INTEGER" },
-              comment: { type: "STRING" },
+  const models = ["gemini-2.5-flash-preview-05-20", "gemini-2.0-flash"]
+
+  for (const model of models) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: "user", parts }],
+            generationConfig: {
+              response_mime_type: "application/json",
+              response_schema: {
+                type: "OBJECT",
+                properties: {
+                  resolved: { type: "BOOLEAN" },
+                  score: { type: "INTEGER" },
+                  comment: { type: "STRING" },
+                },
+                required: ["resolved", "score", "comment"],
+              },
             },
-            required: ["resolved", "score", "comment"],
-          },
-        },
-      }),
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errText = await response.text()
+        console.error(`[v0] Gemini ${model} verify error:`, response.status, errText)
+        continue
+      }
+
+      const data = await response.json()
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+      if (!text) {
+        console.error(`[v0] Gemini ${model} verify empty:`, JSON.stringify(data))
+        continue
+      }
+      return JSON.parse(text)
+    } catch (e) {
+      console.error(`[v0] Gemini ${model} verify exception:`, e)
+      continue
     }
-  )
-
-  if (!response.ok) {
-    const errText = await response.text()
-    console.error("[v0] Gemini verify error:", response.status, errText)
-    throw new Error(`Gemini API error ${response.status}: ${errText}`)
   }
 
-  const data = await response.json()
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) {
-    console.error("[v0] Gemini verify empty response:", JSON.stringify(data))
-    throw new Error("Empty response from Gemini")
-  }
-  return JSON.parse(text)
+  throw new Error("All Gemini models failed")
 }
 
 async function imageUrlToBase64Part(url: string) {
@@ -153,13 +164,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Store result
-    const { error: dbError } = await supabase
+    // Store AI verification result
+    await supabase
       .from("service_requests")
       .update({ ai_verification: verification })
       .eq("id", requestId)
-
-    if (dbError) console.error("[verify-report] DB error:", dbError)
 
     return NextResponse.json({ verification, after_url: afterUrl })
   } catch (err) {

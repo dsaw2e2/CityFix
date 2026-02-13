@@ -4,20 +4,12 @@ import { NextResponse, type NextRequest } from "next/server"
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // --- 1. Skip middleware entirely for public paths ---
-  // The landing page, auth pages, API routes, and static files
-  // should never be blocked by middleware
-  if (
-    pathname === "/" ||
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/api") ||
-    pathname.startsWith("/_next") ||
-    pathname.includes(".")
-  ) {
+  // Skip static files only
+  if (pathname.startsWith("/_next") || pathname.includes(".")) {
     return NextResponse.next()
   }
 
-  // --- 2. Only run Supabase session refresh on protected paths ---
+  // --- Always refresh Supabase session (including /api routes) ---
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -41,41 +33,46 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // This refreshes the session token in cookies
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // --- 3. Redirect unauthenticated users to login ---
+  // For API routes, landing page, and auth pages: just refresh session, no redirects
+  if (
+    pathname === "/" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/api")
+  ) {
+    return supabaseResponse
+  }
+
+  // --- Protected portal routes: redirect unauthenticated users ---
   if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = "/auth/login"
     return NextResponse.redirect(url)
   }
 
-  // --- 4. Role-based route guard ---
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single()
-
-  if (profile) {
-    const rolePathMap: Record<string, string> = {
-      citizen: "/citizen",
-      worker: "/worker",
-      admin: "/admin",
-    }
-    const allowedPath = rolePathMap[profile.role]
-    if (allowedPath && !pathname.startsWith(allowedPath)) {
-      const url = request.nextUrl.clone()
-      url.pathname = allowedPath
-      return NextResponse.redirect(url)
-    }
+  // --- Role-based route guard using JWT metadata (no DB query) ---
+  const role = (user.user_metadata?.role as string) || "citizen"
+  const rolePathMap: Record<string, string> = {
+    citizen: "/citizen",
+    worker: "/worker",
+    admin: "/admin",
+  }
+  const allowedPath = rolePathMap[role]
+  if (allowedPath && !pathname.startsWith(allowedPath)) {
+    const url = request.nextUrl.clone()
+    url.pathname = allowedPath
+    return NextResponse.redirect(url)
   }
 
   return supabaseResponse
 }
 
 export const config = {
-  matcher: ["/citizen/:path*", "/worker/:path*", "/admin/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 }

@@ -1,8 +1,7 @@
-import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
-  // Verify the user is authenticated
   const supabase = await createClient()
   const {
     data: { user },
@@ -19,9 +18,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Title and category are required" }, { status: 400 })
   }
 
-  // Use admin client to bypass RLS
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  // Use the same authenticated supabase client - RLS policy is auth.uid() = citizen_id
+  const { data, error } = await supabase
     .from("service_requests")
     .insert({
       title,
@@ -38,7 +36,7 @@ export async function POST(req: Request) {
     .single()
 
   if (error) {
-    console.error("[v0] Submit request error:", error)
+    console.error("[v0] Submit error:", error.message, error.details, error.hint)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

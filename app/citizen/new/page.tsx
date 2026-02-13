@@ -148,17 +148,24 @@ export default function NewRequestPage() {
     if (!validation?.valid) return
     setIsSubmitting(true)
     try {
-      const supabase = createClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) { router.push("/auth/login"); return }
-
-      const { error } = await supabase.from("service_requests").insert({
-        title: title.trim(), description: description.trim() || null,
-        category_id: categoryId, priority: validation.suggested_priority || priority,
-        citizen_id: user.id, address: address.trim() || null,
-        latitude, longitude, photo_url: uploadedPhotoUrl,
+      const res = await fetch("/api/citizen/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || null,
+          category_id: categoryId,
+          priority: validation.suggested_priority || priority,
+          address: address.trim() || null,
+          latitude,
+          longitude,
+          photo_url: uploadedPhotoUrl,
+        }),
       })
-      if (error) throw error
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to submit")
+      }
       router.push("/citizen")
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Unknown error")

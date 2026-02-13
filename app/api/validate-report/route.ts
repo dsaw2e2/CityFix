@@ -22,56 +22,41 @@ async function callGemini(systemPrompt: string, userText: string, imageUrl?: str
   const apiKey = process.env.GOOGLE_AI_API_KEY
   if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not set")
 
-  // Try gemini-2.5-flash-preview-05-20, fall back to gemini-2.0-flash
-  const models = ["gemini-2.5-flash-preview-05-20", "gemini-2.0-flash"]
-
-  for (const model of models) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: "user", parts }],
-            generationConfig: {
-              response_mime_type: "application/json",
-              response_schema: {
-                type: "OBJECT",
-                properties: {
-                  valid: { type: "BOOLEAN" },
-                  score: { type: "INTEGER" },
-                  reason: { type: "STRING" },
-                  suggested_priority: { type: "STRING", enum: ["low", "medium", "high", "urgent"] },
-                },
-                required: ["valid", "score", "reason", "suggested_priority"],
-              },
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: "user", parts }],
+        generationConfig: {
+          response_mime_type: "application/json",
+          response_schema: {
+            type: "OBJECT",
+            properties: {
+              valid: { type: "BOOLEAN" },
+              score: { type: "INTEGER" },
+              reason: { type: "STRING" },
+              suggested_priority: { type: "STRING", enum: ["low", "medium", "high", "urgent"] },
             },
-          }),
-        }
-      )
-
-      if (!response.ok) {
-        const errText = await response.text()
-        console.error(`[v0] Gemini ${model} error:`, response.status, errText)
-        continue // try next model
-      }
-
-      const data = await response.json()
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-      if (!text) {
-        console.error(`[v0] Gemini ${model} empty response:`, JSON.stringify(data))
-        continue
-      }
-      return JSON.parse(text)
-    } catch (e) {
-      console.error(`[v0] Gemini ${model} exception:`, e)
-      continue
+            required: ["valid", "score", "reason", "suggested_priority"],
+          },
+        },
+      }),
     }
+  )
+
+  if (!response.ok) {
+    const errText = await response.text()
+    console.error("[v0] Gemini validate error:", response.status, errText)
+    throw new Error(`Gemini API error ${response.status}: ${errText}`)
   }
 
-  throw new Error("All Gemini models failed")
+  const data = await response.json()
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!text) throw new Error("Empty response from Gemini")
+  return JSON.parse(text)
 }
 
 export async function POST(req: NextRequest) {

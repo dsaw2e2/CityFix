@@ -287,12 +287,7 @@ export default function AdminRequestsPage() {
                       {r.ai_verification.score != null ? `${r.ai_verification.score}/10` : "NA"}
                     </span>
                   )}
-                  {r.ai_validation && (
-                    <span className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${r.ai_validation.valid ? "bg-primary/10 text-primary" : "bg-destructive/15 text-destructive"}`}>
-                      <BrainCircuit className="h-3 w-3" />
-                      {t("common.report")}: {r.ai_validation.valid ? t("admin.requests.report_valid") : t("admin.requests.report_rejected")} ({r.ai_validation.score != null ? `${r.ai_validation.score}/10` : "NA"})
-                    </span>
-                  )}
+
                 </div>
               </div>
               <div className="flex items-center gap-2">

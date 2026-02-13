@@ -28,7 +28,7 @@ async function fetchRequests(): Promise<ServiceRequest[]> {
 
   const { data } = await supabase
     .from("service_requests")
-    .select("*, category:categories(*), ai_validation")
+    .select("*, category:categories(*)")
     .eq("citizen_id", user.id)
     .order("created_at", { ascending: false })
 

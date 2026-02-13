@@ -50,34 +50,15 @@ interface AIVerification {
 }
 
 async function fetchMyTasks(): Promise<ServiceRequest[]> {
-  const supabase = createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const { data } = await supabase
-    .from("service_requests")
-    .select("*, category:categories(*)")
-    .eq("assigned_worker_id", user.id)
-    .in("status", ["assigned", "in_progress"])
-    .order("priority", { ascending: false })
-    .order("created_at", { ascending: true })
-
-  return (data ?? []) as ServiceRequest[]
+  const res = await fetch("/api/worker/tasks?type=my")
+  if (!res.ok) return []
+  return res.json()
 }
 
 async function fetchAvailableTasks(): Promise<ServiceRequest[]> {
-  const supabase = createClient()
-  const { data } = await supabase
-    .from("service_requests")
-    .select("*, category:categories(*)")
-    .is("assigned_worker_id", null)
-    .eq("status", "submitted")
-    .order("priority", { ascending: false })
-    .order("created_at", { ascending: true })
-
-  return (data ?? []) as ServiceRequest[]
+  const res = await fetch("/api/worker/tasks?type=available")
+  if (!res.ok) return []
+  return res.json()
 }
 
 function VerificationResult({ result }: { result: AIVerification }) {
@@ -119,22 +100,15 @@ function AvailableTaskCard({ task }: { task: ServiceRequest }) {
   const handleClaim = async () => {
     setIsClaiming(true)
     try {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
-
-      const { error } = await supabase
-        .from("service_requests")
-        .update({
-          assigned_worker_id: user.id,
-          status: "assigned" as RequestStatus,
-        })
-        .eq("id", task.id)
-        .is("assigned_worker_id", null)
-
-      if (error) throw error
+      const res = await fetch("/api/worker/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: task.id, action: "claim" }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to claim")
+      }
       toast.success(t("worker.claim") + "!")
       mutate("worker-tasks")
       mutate("worker-available")
@@ -282,11 +256,15 @@ function MyTaskCard({ task }: { task: ServiceRequest }) {
         photoUrl = publicUrl
       }
 
-      const { error: updateError } = await supabase
-        .from("service_requests")
-        .update({ status: newStatus })
-        .eq("id", task.id)
-      if (updateError) throw updateError
+      const statusRes = await fetch("/api/worker/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: task.id, action: "update_status", status: newStatus }),
+      })
+      if (!statusRes.ok) {
+        const err = await statusRes.json()
+        throw new Error(err.error || "Failed to update status")
+      }
 
       const { error: logError } = await supabase
         .from("request_updates")

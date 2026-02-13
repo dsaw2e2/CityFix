@@ -156,7 +156,7 @@ export default function NewRequestPage() {
         title: title.trim(), description: description.trim() || null,
         category_id: categoryId, priority: validation.suggested_priority || priority,
         citizen_id: user.id, address: address.trim() || null,
-        latitude, longitude, photo_url: uploadedPhotoUrl, ai_validation: validation,
+        latitude, longitude, photo_url: uploadedPhotoUrl,
       })
       if (error) throw error
       router.push("/citizen")

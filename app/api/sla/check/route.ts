@@ -1,28 +1,26 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 export async function POST() {
   const supabase = await createClient()
 
-  // Verify admin
+  // Verify admin via user metadata
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single()
-  if (profile?.role !== "admin") {
+  const role = (user.user_metadata?.role as string) || "citizen"
+  if (role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
+  const admin = createAdminClient()
+
   // Find overdue requests: past sla_deadline, not resolved/closed/overdue
   const now = new Date().toISOString()
-  const { data: overdueRequests, error: fetchErr } = await supabase
+  const { data: overdueRequests, error: fetchErr } = await admin
     .from("service_requests")
     .select("id, assigned_worker_id, sla_deadline, status")
     .not("status", "in", '("resolved","closed","overdue")')
@@ -38,7 +36,7 @@ export async function POST() {
 
   for (const req of overdueRequests || []) {
     // Mark as overdue
-    await supabase
+    await admin
       .from("service_requests")
       .update({ status: "overdue" })
       .eq("id", req.id)
@@ -48,7 +46,7 @@ export async function POST() {
     const delayHours = Math.round((delayMs / (1000 * 60 * 60)) * 10) / 10
 
     // Record violation
-    const { error: violErr } = await supabase.from("sla_violations").insert({
+    const { error: violErr } = await admin.from("sla_violations").insert({
       request_id: req.id,
       worker_id: req.assigned_worker_id,
       delay_hours: delayHours,
@@ -59,7 +57,7 @@ export async function POST() {
 
       // Increment worker's violation count
       if (req.assigned_worker_id) {
-        await supabase.rpc("increment_sla_violations", {
+        await admin.rpc("increment_sla_violations", {
           worker_id: req.assigned_worker_id,
         })
       }

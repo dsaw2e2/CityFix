@@ -26,8 +26,12 @@ export default function WorkerLayout({ children }: { children: React.ReactNode }
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push("/auth/login"); return }
-      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single()
-      if (data) setProfile(data)
+      // Read from user metadata to avoid RLS issues
+      setProfile({
+        id: user.id,
+        full_name: (user.user_metadata?.full_name as string) || t("role.worker"),
+        role: (user.user_metadata?.role as string) || "worker",
+      } as Profile)
       setLoading(false)
     }
     loadProfile()

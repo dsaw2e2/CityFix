@@ -1,6 +1,5 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
 import { StatusBadge } from "@/components/status-badge"
 import { PriorityBadge } from "@/components/priority-badge"
 import { Button } from "@/components/ui/button"
@@ -45,22 +44,15 @@ import { toast } from "sonner"
 import useSWR, { mutate } from "swr"
 
 async function fetchAllRequests(): Promise<ServiceRequest[]> {
-  const supabase = createClient()
-  const { data } = await supabase
-    .from("service_requests")
-    .select("*, category:categories(*), worker:profiles!service_requests_assigned_worker_id_fkey(*)")
-    .order("created_at", { ascending: false })
-  return (data ?? []) as ServiceRequest[]
+  const res = await fetch("/api/admin/requests")
+  if (!res.ok) return []
+  return res.json()
 }
 
 async function fetchWorkers(): Promise<Profile[]> {
-  const supabase = createClient()
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("role", "worker")
-    .order("full_name")
-  return (data ?? []) as Profile[]
+  const res = await fetch("/api/admin/workers")
+  if (!res.ok) return []
+  return res.json()
 }
 
 function AssignDialog({
@@ -81,18 +73,21 @@ function AssignDialog({
   const handleAssign = async () => {
     setIsAssigning(true)
     try {
-      const supabase = createClient()
       const newStatus = selectedWorker && selectedStatus === "submitted" ? "assigned" : selectedStatus
-      const { error } = await supabase
-        .from("service_requests")
-        .update({
+      const res = await fetch("/api/admin/requests", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId: request.id,
           assigned_worker_id: selectedWorker || null,
           priority: selectedPriority,
           status: newStatus,
-        })
-        .eq("id", request.id)
-
-      if (error) throw error
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed")
+      }
       toast.success(t("admin.requests.save"))
       setOpen(false)
       mutate("admin-requests")
@@ -107,12 +102,15 @@ function AssignDialog({
     if (!confirm(t("admin.requests.delete_confirm"))) return
     setIsDeleting(true)
     try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from("service_requests")
-        .delete()
-        .eq("id", request.id)
-      if (error) throw error
+      const res = await fetch("/api/admin/requests", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: request.id }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed")
+      }
       toast.success(t("admin.requests.delete"))
       setOpen(false)
       mutate("admin-requests")

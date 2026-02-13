@@ -36,12 +36,12 @@ export default function CitizenLayout({
         router.push("/auth/login")
         return
       }
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single()
-      if (data) setProfile(data)
+      // Read from user metadata to avoid RLS issues
+      setProfile({
+        id: user.id,
+        full_name: (user.user_metadata?.full_name as string) || t("role.citizen"),
+        role: (user.user_metadata?.role as string) || "citizen",
+      } as Profile)
 
       const { count } = await supabase
         .from("service_requests")

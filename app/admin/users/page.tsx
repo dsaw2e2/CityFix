@@ -1,7 +1,5 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
@@ -20,12 +18,9 @@ import { toast } from "sonner"
 import useSWR, { mutate } from "swr"
 
 async function fetchAllUsers(): Promise<Profile[]> {
-  const supabase = createClient()
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .order("created_at", { ascending: false })
-  return (data ?? []) as Profile[]
+  const res = await fetch("/api/admin/users")
+  if (!res.ok) return []
+  return res.json()
 }
 
 const ROLE_ICONS: Record<UserRole, React.ReactNode> = {
@@ -47,13 +42,15 @@ function UserCard({ profile }: { profile: Profile }) {
   const handleRoleChange = async (newRole: UserRole) => {
     setIsUpdating(true)
     try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from("profiles")
-        .update({ role: newRole })
-        .eq("id", profile.id)
-
-      if (error) throw error
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: profile.id, newRole }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed")
+      }
       toast.success(`${t("auth.role")}: ${t(`role.${newRole}`)}`)
       mutate("admin-users")
     } catch (err: unknown) {

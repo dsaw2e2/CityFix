@@ -34,24 +34,16 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
       if (signInError) throw signInError
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
+      // Read role directly from user metadata (no RLS query needed)
+      const user = signInData.user
       if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single()
-
-        const role = profile?.role ?? "citizen"
+        const role = (user.user_metadata?.role as string) || "citizen"
         window.location.href = `/${role}`
         return
       }

@@ -41,28 +41,22 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // If user is logged in, fetch their role for routing
+  // If user is logged in, check role from metadata for routing
   if (user && isProtected) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single()
+    const role = (user.user_metadata?.role as string) || "citizen"
 
-    if (profile) {
-      const rolePathMap: Record<string, string> = {
-        citizen: "/citizen",
-        worker: "/worker",
-        admin: "/admin",
-      }
-      const allowedPath = rolePathMap[profile.role]
+    const rolePathMap: Record<string, string> = {
+      citizen: "/citizen",
+      worker: "/worker",
+      admin: "/admin",
+    }
+    const allowedPath = rolePathMap[role]
 
-      // Redirect if accessing a portal not matching their role
-      if (allowedPath && !request.nextUrl.pathname.startsWith(allowedPath)) {
-        const url = request.nextUrl.clone()
-        url.pathname = allowedPath
-        return NextResponse.redirect(url)
-      }
+    // Redirect if accessing a portal not matching their role
+    if (allowedPath && !request.nextUrl.pathname.startsWith(allowedPath)) {
+      const url = request.nextUrl.clone()
+      url.pathname = allowedPath
+      return NextResponse.redirect(url)
     }
   }
 

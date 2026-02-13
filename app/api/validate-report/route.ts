@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 
 export const maxDuration = 60
 
-const GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1"
-
 async function callGemini(systemPrompt: string, userText: string, imageUrl?: string) {
   const parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }> = []
 
@@ -21,8 +19,11 @@ async function callGemini(systemPrompt: string, userText: string, imageUrl?: str
     }
   }
 
+  const apiKey = process.env.GOOGLE_AI_API_KEY
+  if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not set")
+
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -48,12 +49,16 @@ async function callGemini(systemPrompt: string, userText: string, imageUrl?: str
 
   if (!response.ok) {
     const errText = await response.text()
+    console.error("[v0] Gemini validate error:", response.status, errText)
     throw new Error(`Gemini API error ${response.status}: ${errText}`)
   }
 
   const data = await response.json()
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) throw new Error("Empty response from Gemini")
+  if (!text) {
+    console.error("[v0] Gemini validate empty response:", JSON.stringify(data))
+    throw new Error("Empty response from Gemini")
+  }
   return JSON.parse(text)
 }
 

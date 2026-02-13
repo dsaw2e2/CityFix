@@ -8,8 +8,11 @@ async function callGeminiWithImages(
   systemPrompt: string,
   parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }>
 ) {
+  const apiKey = process.env.GOOGLE_AI_API_KEY
+  if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not set")
+
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -34,12 +37,16 @@ async function callGeminiWithImages(
 
   if (!response.ok) {
     const errText = await response.text()
+    console.error("[v0] Gemini verify error:", response.status, errText)
     throw new Error(`Gemini API error ${response.status}: ${errText}`)
   }
 
   const data = await response.json()
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) throw new Error("Empty response from Gemini")
+  if (!text) {
+    console.error("[v0] Gemini verify empty response:", JSON.stringify(data))
+    throw new Error("Empty response from Gemini")
+  }
   return JSON.parse(text)
 }
 
